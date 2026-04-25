@@ -51,6 +51,7 @@ export class Chamber {
       });
 
       await (this.viewer as any).addSplatScene(memory.plyUrl, {
+        format: GaussianSplats3D.SceneFormat.Ply,
         splatAlphaRemovalThreshold: 5,
       });
 
