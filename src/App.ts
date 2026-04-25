@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Gallery } from './Gallery';
 import { Chamber } from './Chamber';
 import { Drawer }  from './Drawer';
+import { cacheMemory, deleteCachedMemory } from './storage/MemoryCache';
 import type { Memory } from './types';
 
 type AppState = 'gallery' | 'transitioning' | 'chamber';
@@ -46,7 +47,10 @@ export class App {
       (mem) => this.deleteMemory(mem),
     );
 
-    new Drawer((mem) => this.gallery.addCard(mem));
+    new Drawer((mem) => {
+      this.gallery.addCard(mem);
+      cacheMemory(mem); // fire-and-forget: download PLY + thumbnail to OPFS
+    });
 
     document.getElementById('chamber-back')!
       .addEventListener('click', () => this.exitChamber());
@@ -139,6 +143,7 @@ export class App {
     } catch { /* ignore — still remove locally */ }
     this.gallery.removeCard(memory.id);
     localStorage.removeItem(`recall_view_${memory.id}`);
+    deleteCachedMemory(memory.id); // remove from OPFS + metadata
   }
 
   private hasPinFor(id: string): boolean {

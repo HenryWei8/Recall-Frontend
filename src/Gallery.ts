@@ -1,5 +1,6 @@
 import { CapsuleCard } from './CapsuleCard';
 import { fetchMemories } from './api/memories';
+import { loadCachedMemories, mergeAndCacheNew } from './storage/MemoryCache';
 import type { Memory } from './types';
 
 export class Gallery {
@@ -13,11 +14,34 @@ export class Gallery {
     this.space = document.getElementById('gallery-space')!;
   }
 
-  async loadMemories(): Promise<Memory[]> {
-    let memories: Memory[] = [];
-    try { memories = await fetchMemories(); } catch { /* show empty */ }
-    this.renderCards(memories);
-    return memories;
+  /**
+   * Load memories in two passes:
+   * 1. Immediately render the local OPFS cache (works offline).
+   * 2. Fetch from GX10, add any new ones to the gallery + cache them.
+   */
+  async loadMemories(): Promise<void> {
+    // Pass 1 — local cache (instant, no network needed)
+    const cached = await loadCachedMemories();
+    if (cached.length > 0) {
+      this.renderCards(cached);
+    }
+
+    // Pass 2 — try GX10
+    try {
+      const remote = await fetchMemories();
+      const fresh  = mergeAndCacheNew(remote);          // new ones not yet cached
+
+      if (cached.length === 0) {
+        // Nothing local yet — render everything from GX10
+        this.renderCards(remote);
+      } else {
+        // Prepend any memories GX10 has that local cache doesn't
+        for (const mem of fresh) this.insertCard(mem, 0);
+      }
+    } catch {
+      // GX10 offline — cached memories are already shown, nothing to do
+      if (cached.length === 0) this.showEmpty();
+    }
   }
 
   private renderCards(memories: Memory[]) {
@@ -25,31 +49,35 @@ export class Gallery {
     this.cards.forEach(c => c.dispose());
     this.cards = [];
 
-    if (memories.length === 0) {
-      this.showEmpty();
-      return;
-    }
-
-    memories.forEach((mem, i) => {
-      const card = this.makeCard(mem, i * 60);
+    if (memories.length === 0) { this.showEmpty(); return; }
+    memories.forEach((m, i) => {
+      const card = this.makeCard(m);
+      card.element.querySelector<HTMLElement>('.capsule-card')!.style.animationDelay = `${i * 55}ms`;
       this.space.appendChild(card.element);
       this.cards.push(card);
     });
   }
 
-  private makeCard(mem: Memory, delayMs = 0): CapsuleCard {
+  private makeCard(mem: Memory): CapsuleCard {
     const card = new CapsuleCard(mem, this.onOpen, this.onDelete);
-    // random float params for organic feel
-    const dy   = 8  + Math.random() * 9;
-    const dur  = 7  + Math.random() * 6;
-    const del  = -Math.random() * dur;   // start mid-animation
-    const tilt = (Math.random() - 0.5) * 1.2;
-    card.setFloatParams(dy, dur, del, tilt);
-    (card.element as HTMLElement).style.animationDelay = `${delayMs}ms`;
-    // override — the card-in animation delay
-    const inner = card.element.querySelector('.capsule-card') as HTMLElement;
-    if (inner) inner.style.animationDelay = `${delayMs}ms`;
+    card.setFloatParams(
+      8  + Math.random() * 9,
+      7  + Math.random() * 6,
+      -Math.random() * 12,
+      (Math.random() - 0.5) * 1.2,
+    );
     return card;
+  }
+
+  private insertCard(mem: Memory, atIndex: number) {
+    const card = this.makeCard(mem);
+    if (atIndex === 0) {
+      this.space.prepend(card.element);
+      this.cards.unshift(card);
+    } else {
+      this.space.appendChild(card.element);
+      this.cards.push(card);
+    }
   }
 
   private showEmpty() {
@@ -73,10 +101,8 @@ export class Gallery {
   }
 
   addCard(memory: Memory) {
-    const empty = this.space.querySelector('.gallery-empty');
-    if (empty) empty.remove();
-
-    const card = this.makeCard(memory, 0);
+    this.space.querySelector('.gallery-empty')?.remove();
+    const card = this.makeCard(memory);
     this.space.prepend(card.element);
     this.cards.unshift(card);
   }
@@ -93,7 +119,5 @@ export class Gallery {
     }, 400);
   }
 
-  dispose() {
-    this.cards.forEach(c => c.dispose());
-  }
+  dispose() { this.cards.forEach(c => c.dispose()); }
 }

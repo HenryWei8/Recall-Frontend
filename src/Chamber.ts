@@ -47,13 +47,17 @@ export class Chamber {
     }
 
     try {
+      // SceneRevealMode.Gradual = 1 — splats materialize outward from the camera
+      // sceneFadeInRateMultiplier < 1 slows the reveal for a dramatic buildup effect
       this.viewer = new GaussianSplats3D.Viewer({
-        selfDrivenMode:         false,
-        renderer:               this.renderer,
-        camera:                 this.camera,
-        useBuiltInControls:     false,
-        gpuAcceleratedSort:     false,
-        sharedMemoryForWorkers: false,
+        selfDrivenMode:            false,
+        renderer:                  this.renderer,
+        camera:                    this.camera,
+        useBuiltInControls:        false,
+        gpuAcceleratedSort:        false,
+        sharedMemoryForWorkers:    false,
+        sceneRevealMode:           1,   // Gradual
+        sceneFadeInRateMultiplier: 0.4, // slower → more dramatic particle buildup
       });
 
       await (this.viewer as any).addSplatScene(memory.plyUrl, {
