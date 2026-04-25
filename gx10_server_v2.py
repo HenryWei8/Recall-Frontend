@@ -12,6 +12,7 @@ import os
 import signal
 import sqlite3
 import subprocess
+import sys
 import threading
 import uuid
 import zipfile
@@ -29,7 +30,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 MONOGS_DIR = Path(os.environ.get("MONOGS_DIR", Path(__file__).parent))
 JOBS_DIR   = Path(os.environ.get("JOBS_DIR",   Path(__file__).parent / "recall_jobs"))
-PYTHON_BIN = Path(os.environ.get("PYTHON_BIN", Path(__file__).parent.parent / "monogs_env" / "bin" / "python"))
+PYTHON_BIN = Path(os.environ.get("PYTHON_BIN", sys.executable))
 DB_PATH    = JOBS_DIR / "jobs.db"
 JOBS_DIR.mkdir(parents=True, exist_ok=True)
 
