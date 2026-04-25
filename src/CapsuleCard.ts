@@ -18,9 +18,14 @@ function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
+function isVideoUrl(url: string): boolean {
+  return /\.(mp4|webm|mov|ogv|ogg)(\?|$)/i.test(url);
+}
+
 export class CapsuleCard {
   readonly element: HTMLElement;
   private video: HTMLVideoElement | null = null;
+  private canPlay = false;
 
   constructor(
     readonly memory: Memory,
@@ -36,14 +41,17 @@ export class CapsuleCard {
     card.setAttribute('tabindex', '0');
     card.setAttribute('aria-label', `Open memory: ${this.memory.title}`);
 
-    const date = this.memory.createdAt ? formatDate(this.memory.createdAt) : '';
+    const date     = this.memory.createdAt ? formatDate(this.memory.createdAt) : '';
+    // posterUrl is a still image (JPEG from GX10 or same MP4 for sample memories)
+    const poster   = escapeHtml(this.memory.posterUrl || this.memory.thumbnailUrl);
+    this.canPlay   = isVideoUrl(this.memory.thumbnailUrl);
+    const videoSrc = this.canPlay ? `src="${escapeHtml(this.memory.thumbnailUrl)}"` : '';
 
-    const isVideo = /\.(mp4|webm|ogg|mov)(\?|$)/i.test(this.memory.thumbnailUrl);
     card.innerHTML = `
       <div class="capsule-preview">
         <video
-          ${isVideo ? `src="${escapeHtml(this.memory.thumbnailUrl)}"` : ''}
-          poster="${escapeHtml(this.memory.thumbnailUrl)}"
+          ${videoSrc}
+          poster="${poster}"
           loop muted playsinline preload="none"
         ></video>
         <div class="capsule-hover-layer">
@@ -61,10 +69,12 @@ export class CapsuleCard {
 
     this.video = card.querySelector('video');
 
-    card.addEventListener('mouseenter', () => this.video?.play().catch(() => {}));
-    card.addEventListener('mouseleave', () => {
-      if (this.video) { this.video.pause(); this.video.currentTime = 0; }
-    });
+    if (this.canPlay) {
+      card.addEventListener('mouseenter', () => this.video?.play().catch(() => {}));
+      card.addEventListener('mouseleave', () => {
+        if (this.video) { this.video.pause(); this.video.currentTime = 0; }
+      });
+    }
 
     card.addEventListener('click', () => this.onOpen(this.memory));
     card.addEventListener('keydown', e => {
