@@ -6,9 +6,8 @@ import type { Memory } from './types';
 export class Chamber {
   readonly camera: THREE.PerspectiveCamera;
 
-  private orbit  : OrbitControls;
-  private viewer : InstanceType<typeof GaussianSplats3D.Viewer> | null = null;
-  private viewerScene: THREE.Scene | null = null;
+  private orbit : OrbitControls;
+  private viewer: InstanceType<typeof GaussianSplats3D.Viewer> | null = null;
 
   constructor(private renderer: THREE.WebGLRenderer) {
     this.camera = new THREE.PerspectiveCamera(
@@ -32,11 +31,9 @@ export class Chamber {
     this.orbit.target.set(0, 0, 0);
     this.orbit.update();
 
-    // Dispose any previous viewer
     if (this.viewer) {
       try { (this.viewer as any).dispose?.(); } catch { /* ignore */ }
-      this.viewer      = null;
-      this.viewerScene = null;
+      this.viewer = null;
     }
 
     try {
@@ -45,22 +42,13 @@ export class Chamber {
         renderer:               this.renderer,
         camera:                 this.camera,
         useBuiltInControls:     false,
-        gpuAcceleratedSort:     true,
+        gpuAcceleratedSort:     false,   // off avoids SharedArrayBuffer requirement
         sharedMemoryForWorkers: false,
       });
 
       await (this.viewer as any).addSplatScene(memory.plyUrl, {
         splatAlphaRemovalThreshold: 5,
       });
-
-      // Try to grab the viewer's internal Three.js scene for self-rendering.
-      const v = this.viewer as any;
-      for (const prop of ['threeScene', 'scene', 'splatScene', 'renderingScene']) {
-        if (v[prop] instanceof THREE.Scene) {
-          this.viewerScene = v[prop] as THREE.Scene;
-          break;
-        }
-      }
     } catch (err) {
       console.warn('GaussianSplats3D load error:', err);
     }
@@ -70,33 +58,29 @@ export class Chamber {
     this.orbit.enabled = false;
     if (this.viewer) {
       try { (this.viewer as any).dispose?.(); } catch { /* ignore */ }
-      this.viewer      = null;
-      this.viewerScene = null;
+      this.viewer = null;
     }
   }
 
-  update(delta: number) {
-    void delta;
+  update(_delta: number) {
     this.orbit.update();
     if (this.viewer) {
-      try { (this.viewer as any).update?.(); } catch { /* ignore */ }
+      try { (this.viewer as any).update(); } catch { /* ignore */ }
     }
   }
 
   render() {
-    const v = this.viewer as any;
-
-    if (this.viewerScene) {
-      this.renderer.autoClear = true;
-      this.renderer.render(this.viewerScene, this.camera);
-    } else if (this.viewer && typeof v.render === 'function') {
-      this.renderer.autoClear = true;
-      try { v.render(); } catch { /* ignore */ }
-    } else {
-      // No splat available — clear to black
-      this.renderer.autoClear = true;
+    if (!this.viewer) {
       this.renderer.setClearColor(0x000000, 1);
       this.renderer.clear();
+      return;
+    }
+    try {
+      // Always let the library drive its own render pipeline —
+      // never render its internal scene directly, that skips the splat passes.
+      (this.viewer as any).render();
+    } catch (e) {
+      console.warn('splat render error:', e);
     }
   }
 
