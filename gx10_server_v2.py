@@ -29,10 +29,32 @@ app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 MONOGS_DIR = Path(os.environ.get("MONOGS_DIR", Path(__file__).parent))
-JOBS_DIR   = Path(os.environ.get("JOBS_DIR",   Path(__file__).parent / "recall_jobs"))
 PYTHON_BIN = Path(os.environ.get("PYTHON_BIN", sys.executable))
-DB_PATH    = JOBS_DIR / "jobs.db"
-JOBS_DIR.mkdir(parents=True, exist_ok=True)
+
+def _pick_jobs_dir() -> Path:
+    """Return the first writable candidate, falling back to /tmp."""
+    env = os.environ.get("JOBS_DIR", "")
+    candidates = [
+        Path(env) if env else None,
+        Path(__file__).parent / "recall_jobs",
+        Path.home() / ".recall" / "jobs",
+        Path("/var/lib/recall/jobs"),
+        Path("/tmp/recall_jobs"),
+    ]
+    for p in candidates:
+        if p is None:
+            continue
+        try:
+            p.mkdir(parents=True, exist_ok=True)
+            (p / ".write_test").touch()
+            (p / ".write_test").unlink()
+            return p
+        except OSError:
+            continue
+    raise RuntimeError("No writable directory found for JOBS_DIR")
+
+JOBS_DIR = _pick_jobs_dir()
+DB_PATH  = JOBS_DIR / "jobs.db"
 
 gpu_lock = threading.Semaphore(1)
 _db_lock = threading.Lock()
