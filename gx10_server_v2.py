@@ -274,6 +274,17 @@ async def _ingest_video(
         for i in range(saved):
             f.write(f"{i / target_fps:.6f} rgb/{i:010d}.jpg\n")
 
+    # TUMParser requires depth.txt even in monocular mode.
+    # Create one dummy zero-depth image and reference it for every frame.
+    depth_dir = dataset_dir / "depth"
+    depth_dir.mkdir()
+    import numpy as np
+    dummy_depth = np.zeros((scale_h, scale_w), dtype=np.uint16)
+    cv2.imwrite(str(depth_dir / "dummy.png"), dummy_depth)
+    with open(dataset_dir / "depth.txt", "w") as f:
+        for i in range(saved):
+            f.write(f"{i / target_fps:.6f} depth/dummy.png\n")
+
     cal = {
         "fx": fx_f, "fy": fy_f, "cx": cx_f, "cy": cy_f,
         "width": scale_w, "height": scale_h,
