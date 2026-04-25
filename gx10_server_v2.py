@@ -28,7 +28,7 @@ app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 MONOGS_DIR = Path(os.environ.get("MONOGS_DIR", Path(__file__).parent))
-JOBS_DIR   = Path(os.environ.get("JOBS_DIR",   "/tmp/monogs_jobs"))
+JOBS_DIR   = Path(os.environ.get("JOBS_DIR",   Path(__file__).parent / "recall_jobs"))
 PYTHON_BIN = Path(os.environ.get("PYTHON_BIN", Path(__file__).parent.parent / "monogs_env" / "bin" / "python"))
 DB_PATH    = JOBS_DIR / "jobs.db"
 JOBS_DIR.mkdir(parents=True, exist_ok=True)
