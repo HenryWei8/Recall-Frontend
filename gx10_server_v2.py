@@ -317,6 +317,26 @@ async def health():
     return {"status": "ok"}
 
 
+@app.get("/api/jobs")
+async def api_jobs():
+    """Debug endpoint: all jobs with full log (newest first)."""
+    with db() as con:
+        rows = con.execute(
+            "SELECT * FROM jobs ORDER BY created_at DESC LIMIT 20"
+        ).fetchall()
+    return [
+        {
+            "id":     r["id"],
+            "title":  r["title"],
+            "status": r["status"],
+            "error":  r["error"],
+            "log":    r["log"],
+            "created_at": r["created_at"],
+        }
+        for r in rows
+    ]
+
+
 @app.get("/api/memories")
 async def api_memories():
     with db() as con:
