@@ -8,6 +8,7 @@ export class Chamber {
 
   private orbit : OrbitControls;
   private viewer: InstanceType<typeof GaussianSplats3D.Viewer> | null = null;
+  private frameCount = 0;
 
   constructor(private renderer: THREE.WebGLRenderer) {
     this.camera = new THREE.PerspectiveCamera(
@@ -27,14 +28,17 @@ export class Chamber {
 
   async enter(memory: Memory): Promise<void> {
     this.orbit.enabled = true;
+    this.frameCount = 0;
     this.camera.position.set(0, 0, 5);
     this.orbit.target.set(0, 0, 0);
     this.orbit.update();
 
     if (this.viewer) {
-      try { (this.viewer as any).dispose?.(); } catch { /* ignore */ }
+      try { await (this.viewer as any).dispose(); } catch { /* ignore */ }
       this.viewer = null;
     }
+
+    console.log('[Chamber] Loading PLY:', memory.plyUrl);
 
     try {
       this.viewer = new GaussianSplats3D.Viewer({
@@ -42,15 +46,21 @@ export class Chamber {
         renderer:               this.renderer,
         camera:                 this.camera,
         useBuiltInControls:     false,
-        gpuAcceleratedSort:     false,   // off avoids SharedArrayBuffer requirement
+        gpuAcceleratedSort:     false,
         sharedMemoryForWorkers: false,
       });
 
       await (this.viewer as any).addSplatScene(memory.plyUrl, {
         splatAlphaRemovalThreshold: 5,
       });
+
+      const v = this.viewer as any;
+      console.log('[Chamber] Scene loaded — initialized:', v.initialized,
+        'splatRenderReady:', v.splatRenderReady,
+        'splatCount:', v.splatMesh?.getSplatCount?.());
     } catch (err) {
-      console.warn('GaussianSplats3D load error:', err);
+      console.error('[Chamber] GaussianSplats3D load error:', err);
+      this.viewer = null;
     }
   }
 
@@ -65,7 +75,9 @@ export class Chamber {
   update(_delta: number) {
     this.orbit.update();
     if (this.viewer) {
-      try { (this.viewer as any).update(); } catch { /* ignore */ }
+      try { (this.viewer as any).update(); } catch (e) {
+        console.warn('[Chamber] update error:', e);
+      }
     }
   }
 
@@ -75,12 +87,22 @@ export class Chamber {
       this.renderer.clear();
       return;
     }
+
+    const v = this.viewer as any;
+    this.frameCount++;
+    if (this.frameCount <= 5 || this.frameCount % 120 === 0) {
+      console.log(`[Chamber] render() frame=${this.frameCount}`,
+        'initialized:', v.initialized,
+        'splatRenderReady:', v.splatRenderReady,
+        'disposing:', v.disposing,
+        'disposed:', v.disposed,
+        'splatCount:', v.splatMesh?.getSplatCount?.());
+    }
+
     try {
-      // Always let the library drive its own render pipeline —
-      // never render its internal scene directly, that skips the splat passes.
-      (this.viewer as any).render();
+      v.render();
     } catch (e) {
-      console.warn('splat render error:', e);
+      console.warn('[Chamber] splat render error:', e);
     }
   }
 
