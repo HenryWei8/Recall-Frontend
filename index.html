@@ -385,6 +385,17 @@
       transition: background 0.16s, color 0.16s;
     }
     .cam-btn-secondary:hover { background: rgba(255,255,255,0.05); color: rgba(237,233,224,0.65); }
+    .cam-btn-download {
+      display: block; width: 100%; padding: 8px 0;
+      background: transparent;
+      color: rgba(201,169,110,0.45);
+      border: 1px solid rgba(201,169,110,0.14);
+      border-radius: 8px;
+      font-size: 12px; cursor: pointer; font-family: var(--font);
+      text-align: center; text-decoration: none;
+      transition: background 0.16s, color 0.16s, border-color 0.16s;
+    }
+    .cam-btn-download:hover { background: rgba(201,169,110,0.1); color: var(--amber); border-color: rgba(201,169,110,0.3); }
 
     .cam-pinned-badge {
       font-size: 9px; color: rgba(201,169,110,0.6);
@@ -555,6 +566,8 @@
       <button id="cam-pin" class="cam-btn-primary">📍 Pin This View</button>
       <button id="cam-reset" class="cam-btn-secondary">↺ Reset View</button>
       <div class="cam-pinned-badge" id="cam-pinned-badge"></div>
+      <div class="cam-rule"></div>
+      <a id="cam-download" class="cam-btn-download" download>⬇ Download PLY</a>
     </div>
   </div>
 

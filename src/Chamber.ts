@@ -61,7 +61,8 @@ export class Chamber {
       });
 
       await (this.viewer as any).addSplatScene(memory.plyUrl, {
-        format: (GaussianSplats3D as any).SceneFormat?.Ply ?? 2,
+        format:   (GaussianSplats3D as any).SceneFormat?.Ply ?? 2,
+        rotation: [1, 0, 0, 0],  // 180° around X — converts SLAM (Y-down) to Three.js (Y-up)
         splatAlphaRemovalThreshold: 5,
       });
     } catch (err) {

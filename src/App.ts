@@ -20,8 +20,10 @@ export class App {
   private chamberLoading  : HTMLElement;
   private camTitleText    : HTMLElement;
   private camPinnedBadge  : HTMLElement;
+  private camDownload     : HTMLAnchorElement;
   private cpX: HTMLElement; private cpY: HTMLElement; private cpZ: HTMLElement;
   private ctX: HTMLElement; private ctY: HTMLElement; private ctZ: HTMLElement;
+
 
   constructor() {
     const canvas = document.getElementById('chamber-canvas') as HTMLCanvasElement;
@@ -34,6 +36,7 @@ export class App {
     this.chamberLoading = document.getElementById('chamber-loading')!;
     this.camTitleText   = document.getElementById('chamber-title-text')!;
     this.camPinnedBadge = document.getElementById('cam-pinned-badge')!;
+    this.camDownload    = document.getElementById('cam-download')! as HTMLAnchorElement;
     this.cpX = document.getElementById('cp-x')!;
     this.cpY = document.getElementById('cp-y')!;
     this.cpZ = document.getElementById('cp-z')!;
@@ -113,6 +116,8 @@ export class App {
 
     this.camTitleText.textContent   = memory.title;
     this.camPinnedBadge.textContent = this.hasPinFor(memory.id) ? '📍 Pinned view loaded' : '';
+    this.camDownload.href           = memory.plyUrl;
+    this.camDownload.download       = `${memory.title}.ply`;
     this.chamberLoading.style.display = 'flex';
     this.chamberOverlay.classList.add('visible');
 
