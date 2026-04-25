@@ -285,6 +285,15 @@ async def _ingest_video(
         for i in range(saved):
             f.write(f"{i / target_fps:.6f} depth/dummy.png\n")
 
+    # TUMParser also requires groundtruth.txt (pose file).
+    # It conditionally sets pose_list only when the file exists but then
+    # unconditionally reads it — creating dummy identity poses satisfies it.
+    # Format: timestamp tx ty tz qx qy qz qw  (qw=1 = identity rotation)
+    with open(dataset_dir / "groundtruth.txt", "w") as f:
+        f.write("# dummy groundtruth — MonoGS will estimate poses from scratch\n")
+        for i in range(saved):
+            f.write(f"{i / target_fps:.6f} 0.0 0.0 0.0 0.0 0.0 0.0 1.0\n")
+
     cal = {
         "fx": fx_f, "fy": fy_f, "cx": cx_f, "cy": cy_f,
         "width": scale_w, "height": scale_h,
