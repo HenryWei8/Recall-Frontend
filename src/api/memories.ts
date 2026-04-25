@@ -25,6 +25,10 @@ export async function pollStatus(jobId: string): Promise<{
   return res.json();
 }
 
-export function resultsUrl(jobId: string): string {
-  return `${BASE}/api/results/${jobId}`;
+export function plyUrl(jobId: string): string {
+  return `${BASE}/api/ply/${jobId}`;
+}
+
+export function thumbnailUrl(jobId: string): string {
+  return `${BASE}/api/thumbnail/${jobId}`;
 }

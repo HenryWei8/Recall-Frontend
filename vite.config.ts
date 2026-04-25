@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite';
 import path from 'path';
 
+const GX10_URL = process.env.GX10_URL ?? 'http://10.30.199.103:8081';
+
 export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(__dirname, 'src') },
@@ -9,8 +11,7 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     proxy: {
-      '/api': { target: 'http://localhost:8080', changeOrigin: true },
-      '/static': { target: 'http://localhost:8080', changeOrigin: true },
+      '/api': { target: GX10_URL, changeOrigin: true },
     },
   },
   build: {

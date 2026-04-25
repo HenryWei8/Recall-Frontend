@@ -38,10 +38,12 @@ export class CapsuleCard {
 
     const date = this.memory.createdAt ? formatDate(this.memory.createdAt) : '';
 
+    const isVideo = /\.(mp4|webm|ogg|mov)(\?|$)/i.test(this.memory.thumbnailUrl);
     card.innerHTML = `
       <div class="capsule-preview">
         <video
-          src="${escapeHtml(this.memory.thumbnailUrl)}"
+          ${isVideo ? `src="${escapeHtml(this.memory.thumbnailUrl)}"` : ''}
+          poster="${escapeHtml(this.memory.thumbnailUrl)}"
           loop muted playsinline preload="none"
         ></video>
         <div class="capsule-hover-layer">

@@ -1,4 +1,4 @@
-import { submitMemory, pollStatus, resultsUrl } from './api/memories';
+import { submitMemory, pollStatus, plyUrl, thumbnailUrl } from './api/memories';
 import type { Memory } from './types';
 
 type OnComplete = (memory: Memory) => void;
@@ -198,17 +198,15 @@ export class Drawer {
           this.stopPolling();
           this.progressBar.style.width = '100%';
           this.logBox.textContent = status.log || 'Done!';
-          const url = resultsUrl(jobId);
-          (this.dlBtn as HTMLAnchorElement).href = url;
+          (this.dlBtn as HTMLAnchorElement).href = plyUrl(jobId);
           this.dlBtn.classList.add('visible');
 
-          // Fire callback so gallery can add the bubble
           const mem: Memory = {
             id:           jobId,
             title:        this.titleInput.value || 'Memory',
-            plyUrl:       url,
-            thumbnailUrl: url,
-            posterUrl:    url,
+            plyUrl:       plyUrl(jobId),
+            thumbnailUrl: thumbnailUrl(jobId),
+            posterUrl:    thumbnailUrl(jobId),
             position:     null,
             createdAt:    new Date().toISOString(),
           };
