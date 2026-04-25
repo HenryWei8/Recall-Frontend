@@ -472,6 +472,22 @@ async def api_thumbnail(job_id: str):
     return FileResponse(thumb_path, media_type="image/jpeg")
 
 
+@app.delete("/api/memories/{job_id}")
+async def api_delete_memory(job_id: str):
+    import shutil
+    row = _get_job(job_id)
+    if not row:
+        raise HTTPException(404, "Not found")
+    job_dir = JOBS_DIR / job_id
+    if job_dir.exists():
+        shutil.rmtree(job_dir, ignore_errors=True)
+    conn = _get_db()
+    conn.execute("DELETE FROM jobs WHERE id = ?", (job_id,))
+    conn.commit()
+    conn.close()
+    return {"deleted": job_id}
+
+
 # ---------------------------------------------------------------------------
 # Entrypoint
 # ---------------------------------------------------------------------------

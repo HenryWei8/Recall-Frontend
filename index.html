@@ -3,337 +3,396 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Memory Archive</title>
+  <title>Recall — Preserve What Matters</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:           #05080f;
-      --surface:      #0c0f1c;
-      --border:       rgba(255,255,255,0.07);
-      --border-hover: rgba(80,150,255,0.45);
-      --text:         #e2e6f0;
-      --text-muted:   #64718a;
-      --accent:       #4a8cff;
+      --bg:        #07060e;
+      --surface:   rgba(255,248,236,0.035);
+      --border:    rgba(201,169,110,0.13);
+      --brd-hover: rgba(201,169,110,0.52);
+      --amber:     #c9a96e;
+      --amber-dim: rgba(201,169,110,0.18);
+      --text:      #ede9e0;
+      --muted:     #6a6257;
+      --danger:    rgba(255,100,80,0.8);
       --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
     }
 
-    html {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font);
-      -webkit-font-smoothing: antialiased;
-    }
-    body {
-      min-height: 100vh;
-      overflow-y: auto;
+    html { background: var(--bg); color: var(--text); font-family: var(--font);
+           -webkit-font-smoothing: antialiased; }
+    body { min-height: 100vh; overflow-y: auto; }
+
+    /* subtle ambient depth */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 70% 50% at 25% 65%, rgba(80,50,20,0.07) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 40% at 75% 30%, rgba(50,35,70,0.06) 0%, transparent 70%);
     }
 
-    /* ── Header ─────────────────────────────────────────────────────────── */
+    /* ── Header ────────────────────────────────────────────── */
     #app-header {
       position: sticky; top: 0; z-index: 40;
-      height: 60px;
+      height: 62px;
       display: flex; align-items: center; justify-content: space-between;
       padding: 0 32px;
-      background: rgba(5,8,15,0.88);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
+      background: rgba(7,6,14,0.85);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
       border-bottom: 1px solid var(--border);
     }
 
-    .brand {
-      display: flex; align-items: center; gap: 11px;
-    }
-    .brand-glyph {
-      width: 32px; height: 32px;
-      background: linear-gradient(135deg, #4a8cff 0%, #9060e8 100%);
-      border-radius: 9px;
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-icon {
+      width: 34px; height: 34px;
+      background: linear-gradient(145deg, #c9a96e 0%, #8b6b3d 100%);
+      border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 15px; font-weight: 700; color: #fff;
       flex-shrink: 0;
-      letter-spacing: -0.5px;
     }
+    .brand-icon svg { width: 18px; height: 18px; fill: rgba(255,255,255,0.92); }
     .brand-name {
-      font-size: 15px;
-      font-weight: 500;
-      letter-spacing: -0.01em;
-      color: var(--text);
+      font-size: 16px; font-weight: 600; letter-spacing: -0.02em; color: var(--text);
     }
-    .brand-tagline {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 1px;
-    }
+    .brand-tag { font-size: 10px; color: var(--muted); margin-top: 1px; letter-spacing: 0.04em; }
 
     #drawer-toggle {
-      display: flex; align-items: center; gap: 6px;
-      padding: 7px 16px;
-      background: var(--accent);
-      color: #fff;
-      border: none; border-radius: 8px;
-      font-size: 13px; font-weight: 500;
-      cursor: pointer; font-family: var(--font);
+      padding: 8px 18px;
+      background: var(--amber-dim);
+      color: var(--amber);
+      border: 1px solid rgba(201,169,110,0.28);
+      border-radius: 8px;
+      font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font);
       letter-spacing: 0.01em;
-      transition: background 0.15s, transform 0.1s;
+      transition: background 0.18s, border-color 0.18s, transform 0.1s;
     }
-    #drawer-toggle:hover  { background: #5a9bff; }
+    #drawer-toggle:hover { background: rgba(201,169,110,0.26); border-color: rgba(201,169,110,0.5); }
     #drawer-toggle:active { transform: scale(0.97); }
 
-    /* ── Gallery ────────────────────────────────────────────────────────── */
+    /* ── Gallery space ──────────────────────────────────────── */
     #gallery-section {
-      max-width: 1360px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 40px 32px 80px;
+      position: relative; z-index: 1;
+      padding: 52px 40px 80px;
+      max-width: 1400px; margin: 0 auto;
     }
 
-    .section-eyebrow {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.12em;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      margin-bottom: 6px;
+    #gallery-space {
+      column-count: 3;
+      column-gap: 22px;
     }
-    .section-heading {
-      font-size: 26px;
-      font-weight: 300;
-      color: var(--text);
-      letter-spacing: -0.025em;
-      margin-bottom: 32px;
-    }
+    @media (max-width: 900px) { #gallery-space { column-count: 2; } }
+    @media (max-width: 560px) { #gallery-space { column-count: 1; } }
 
-    #gallery-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-      gap: 18px;
-    }
-
-    /* ── Empty state ────────────────────────────────────────────────────── */
+    /* ── Empty state ────────────────────────────────────────── */
     .gallery-empty {
-      grid-column: 1 / -1;
-      padding: 90px 20px;
+      column-span: all;
+      padding: 100px 20px;
       text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
     }
-    .gallery-empty-icon {
-      font-size: 40px;
-      margin-bottom: 18px;
-      opacity: 0.12;
+    .empty-glyph {
+      width: 56px; height: 56px;
+      border: 1.5px solid rgba(201,169,110,0.2);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 8px;
+    }
+    .empty-glyph svg { width: 26px; height: 26px; stroke: rgba(201,169,110,0.35); fill: none; stroke-width: 1.5; }
+    .gallery-empty h2 {
+      font-size: 22px; font-weight: 300; letter-spacing: -0.02em; color: rgba(237,233,224,0.55);
     }
     .gallery-empty p {
-      font-size: 14px;
-      color: var(--text-muted);
-      max-width: 270px;
-      margin: 0 auto;
-      line-height: 1.7;
+      font-size: 13px; color: var(--muted); max-width: 300px; line-height: 1.8;
+    }
+    .empty-cta {
+      margin-top: 8px;
+      padding: 10px 22px;
+      background: var(--amber-dim);
+      color: var(--amber);
+      border: 1px solid rgba(201,169,110,0.25);
+      border-radius: 8px;
+      font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font);
+      transition: background 0.18s;
+    }
+    .empty-cta:hover { background: rgba(201,169,110,0.26); }
+
+    /* ── Capsule float animation ────────────────────────────── */
+    @keyframes capsule-float {
+      0%   { transform: translateY(0px)                   rotate(var(--tilt, 0deg)); }
+      30%  { transform: translateY(calc(-1 * var(--dy, 10px))) rotate(calc(var(--tilt, 0deg) + 0.4deg)); }
+      70%  { transform: translateY(calc(-0.4 * var(--dy, 10px))) rotate(calc(var(--tilt, 0deg) - 0.3deg)); }
+      100% { transform: translateY(0px)                   rotate(var(--tilt, 0deg)); }
     }
 
-    /* ── Capsule card ───────────────────────────────────────────────────── */
+    /* ── Capsule wrap (holds animation + spacing) ───────────── */
+    .capsule-wrap {
+      break-inside: avoid;
+      display: block;
+      margin-bottom: 22px;
+      animation: capsule-float var(--dur, 9s) var(--del, 0s) ease-in-out infinite;
+      transform-origin: 50% 100%;
+    }
+    /* pause drift when card is hovered */
+    .capsule-wrap:has(.capsule-card:hover),
+    .capsule-wrap:has(.capsule-card:focus-visible) {
+      animation-play-state: paused;
+    }
+
+    /* ── Capsule card ───────────────────────────────────────── */
     .capsule-card {
+      position: relative;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 14px;
+      border-radius: 16px;
       overflow: hidden;
       cursor: pointer;
       outline: none;
-      transition: border-color 0.22s, transform 0.22s, box-shadow 0.22s;
-      animation: cardIn 0.38s ease both;
+      transition: border-color 0.25s, transform 0.28s cubic-bezier(.2,.8,.3,1), box-shadow 0.28s;
+      animation: card-in 0.5s ease both;
     }
+    @keyframes card-in {
+      from { opacity: 0; transform: translateY(20px) scale(0.96); }
+      to   { opacity: 1; transform: translateY(0)    scale(1); }
+    }
+
     .capsule-card:hover {
-      border-color: var(--border-hover);
-      transform: translateY(-5px);
-      box-shadow: 0 18px 52px rgba(0,0,0,0.55), 0 0 0 1px rgba(80,150,255,0.09);
+      border-color: var(--brd-hover);
+      transform: translateY(-7px) scale(1.015);
+      box-shadow:
+        0 24px 60px rgba(0,0,0,0.7),
+        0 0 0 1px rgba(201,169,110,0.08),
+        0 0 40px rgba(201,169,110,0.07);
     }
     .capsule-card:focus-visible {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(74,140,255,0.3);
-    }
-    .capsule-card:active {
-      transform: translateY(-2px);
-      transition-duration: 0.08s;
+      border-color: var(--amber);
+      box-shadow: 0 0 0 3px rgba(201,169,110,0.25);
     }
 
-    @keyframes cardIn {
-      from { opacity: 0; transform: translateY(16px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
+    /* preview */
     .capsule-preview {
       position: relative;
-      aspect-ratio: 16 / 10;
+      aspect-ratio: 4 / 3;
       overflow: hidden;
-      background: #080a14;
+      background: #0a0910;
     }
     .capsule-preview video {
-      width: 100%; height: 100%;
-      object-fit: cover;
-      display: block;
-      opacity: 0.9;
-      transition: transform 0.5s ease, opacity 0.25s ease;
+      width: 100%; height: 100%; object-fit: cover; display: block;
+      opacity: 0.88;
+      transition: transform 0.55s ease, opacity 0.28s;
     }
-    .capsule-card:hover .capsule-preview video {
-      transform: scale(1.05);
-      opacity: 1;
-    }
+    .capsule-card:hover .capsule-preview video { transform: scale(1.06); opacity: 1; }
 
+    /* hover overlay */
     .capsule-hover-layer {
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
       background: rgba(0,0,0,0);
-      transition: background 0.22s ease;
+      transition: background 0.25s;
     }
-    .capsule-card:hover .capsule-hover-layer {
-      background: rgba(0,0,0,0.22);
-    }
+    .capsule-card:hover .capsule-hover-layer { background: rgba(0,0,0,0.25); }
 
     .capsule-cta {
-      padding: 9px 20px;
-      background: rgba(74,140,255,0.9);
-      backdrop-filter: blur(10px);
+      padding: 9px 22px;
+      background: rgba(201,169,110,0.85);
+      backdrop-filter: blur(12px);
       border-radius: 8px;
-      font-size: 13px;
-      font-weight: 500;
-      color: #fff;
-      letter-spacing: 0.02em;
-      opacity: 0;
-      transform: translateY(8px) scale(0.95);
-      transition: opacity 0.22s ease, transform 0.22s ease;
+      font-size: 12px; font-weight: 600;
+      color: #1a1208;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      opacity: 0; transform: translateY(10px) scale(0.93);
+      transition: opacity 0.25s, transform 0.25s;
       white-space: nowrap;
+      pointer-events: none;
     }
-    .capsule-card:hover .capsule-cta {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
+    .capsule-card:hover .capsule-cta { opacity: 1; transform: translateY(0) scale(1); }
 
-    .capsule-info {
-      padding: 13px 16px 15px;
+    /* delete button */
+    .capsule-delete {
+      position: absolute; top: 10px; right: 10px;
+      width: 28px; height: 28px;
+      background: rgba(10,9,14,0.72);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,100,80,0.25);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      opacity: 0; transform: scale(0.8);
+      transition: opacity 0.22s, transform 0.22s, background 0.18s, border-color 0.18s;
+      z-index: 5;
     }
+    .capsule-delete svg { width: 11px; height: 11px; stroke: rgba(255,130,100,0.85); stroke-width: 2; fill: none; }
+    .capsule-card:hover .capsule-delete { opacity: 1; transform: scale(1); }
+    .capsule-delete:hover { background: rgba(255,70,50,0.2) !important; border-color: rgba(255,100,80,0.6) !important; }
+
+    /* info strip */
+    .capsule-info { padding: 13px 15px 15px; }
     .capsule-name {
-      font-size: 15px;
-      font-weight: 500;
-      color: var(--text);
-      margin-bottom: 5px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      font-size: 14px; font-weight: 500;
+      color: var(--text); margin-bottom: 5px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       letter-spacing: -0.01em;
     }
-    .capsule-meta {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-    }
-    .capsule-date {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
+    .capsule-meta { display: flex; align-items: center; gap: 7px; }
+    .capsule-date { font-size: 11px; color: var(--muted); }
     .capsule-sep {
-      width: 3px; height: 3px;
-      background: var(--text-muted);
-      border-radius: 50%;
-      opacity: 0.35;
-      flex-shrink: 0;
+      width: 2px; height: 2px; background: var(--muted);
+      border-radius: 50%; opacity: 0.4; flex-shrink: 0;
     }
     .capsule-tag {
-      font-size: 10px;
-      font-weight: 600;
-      color: rgba(74,140,255,0.75);
-      background: rgba(74,140,255,0.08);
-      border: 1px solid rgba(74,140,255,0.16);
-      border-radius: 4px;
-      padding: 2px 6px;
+      font-size: 10px; font-weight: 600;
+      color: rgba(201,169,110,0.65);
+      background: rgba(201,169,110,0.07);
+      border: 1px solid rgba(201,169,110,0.14);
+      border-radius: 4px; padding: 2px 6px;
       letter-spacing: 0.06em;
     }
 
-    /* ── Chamber overlay ────────────────────────────────────────────────── */
+    /* delete/remove animation */
+    .capsule-wrap.removing {
+      animation: card-out 0.38s ease forwards !important;
+    }
+    @keyframes card-out {
+      to { opacity: 0; transform: translateY(10px) scale(0.9); }
+    }
+
+    /* ── Chamber overlay ────────────────────────────────────── */
     #chamber-overlay {
       position: fixed; inset: 0; z-index: 200;
       background: #000;
-      display: flex; flex-direction: column;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.28s ease;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease;
     }
-    #chamber-overlay.visible {
-      opacity: 1;
-      pointer-events: all;
-    }
+    #chamber-overlay.visible { opacity: 1; pointer-events: all; }
 
     #chamber-canvas {
       position: absolute; inset: 0;
-      width: 100%; height: 100%;
-      display: block;
+      width: 100%; height: 100%; display: block;
     }
 
     #chamber-topbar {
-      position: relative; z-index: 10;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 20px;
-      background: linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, transparent 100%);
+      position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+      display: flex; align-items: center;
+      padding: 16px 20px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%);
     }
 
     #chamber-back {
-      display: flex; align-items: center; gap: 7px;
-      padding: 8px 15px;
-      background: rgba(255,255,255,0.07);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255,255,255,0.1);
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 16px;
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(255,255,255,0.09);
       border-radius: 8px;
-      color: rgba(255,255,255,0.8);
-      font-size: 13px; font-weight: 400;
-      cursor: pointer; font-family: var(--font);
+      color: rgba(255,255,255,0.7);
+      font-size: 13px; cursor: pointer; font-family: var(--font);
       transition: background 0.15s, color 0.15s;
     }
-    #chamber-back:hover {
-      background: rgba(255,255,255,0.12);
-      color: #fff;
-    }
-
-    #chamber-title-text {
-      font-size: 14px;
-      font-weight: 400;
-      color: rgba(255,255,255,0.5);
-      letter-spacing: 0.04em;
-      max-width: 38%;
-      text-align: center;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+    #chamber-back:hover { background: rgba(255,255,255,0.11); color: #fff; }
 
     #chamber-hint {
-      position: absolute; bottom: 22px; left: 50%;
+      position: absolute; bottom: 20px; left: 50%;
       transform: translateX(-50%);
       z-index: 10;
-      font-size: 11px;
-      color: rgba(255,255,255,0.2);
-      letter-spacing: 0.1em;
-      pointer-events: none;
-      white-space: nowrap;
+      font-size: 11px; color: rgba(255,255,255,0.18);
+      letter-spacing: 0.1em; pointer-events: none; white-space: nowrap;
     }
 
     #chamber-loading {
       position: absolute; inset: 0; z-index: 5;
       display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 14px;
+      align-items: center; justify-content: center; gap: 16px;
     }
     .chamber-spinner {
-      width: 28px; height: 28px;
-      border: 1.5px solid rgba(255,255,255,0.08);
-      border-top-color: rgba(74,140,255,0.75);
+      width: 32px; height: 32px;
+      border: 1.5px solid rgba(255,255,255,0.07);
+      border-top-color: var(--amber);
       border-radius: 50%;
-      animation: spin 0.75s linear infinite;
+      animation: spin 0.8s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     #loading-text {
-      font-size: 11px;
-      color: rgba(255,255,255,0.22);
-      letter-spacing: 0.14em;
+      font-size: 10px; color: rgba(255,255,255,0.2);
+      letter-spacing: 0.2em;
     }
 
-    /* ── Drawer ─────────────────────────────────────────────────────────── */
+    /* ── Camera control panel ───────────────────────────────── */
+    #cam-panel {
+      position: absolute;
+      top: 72px; right: 20px;
+      z-index: 10;
+      width: 210px;
+      background: rgba(7,6,14,0.78);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(201,169,110,0.16);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex; flex-direction: column; gap: 10px;
+      transition: opacity 0.3s, transform 0.3s;
+    }
+
+    .cam-title {
+      font-size: 13px; font-weight: 500;
+      color: var(--text);
+      letter-spacing: -0.01em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .cam-rule {
+      height: 1px;
+      background: rgba(201,169,110,0.12);
+    }
+    .cam-section {
+      font-size: 9px; font-weight: 600;
+      color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase;
+      margin-bottom: -4px;
+    }
+    .cam-row {
+      display: flex; align-items: center; gap: 6px; flex-wrap: nowrap;
+    }
+    .cam-axis {
+      font-size: 9px; font-weight: 700;
+      color: rgba(201,169,110,0.55);
+      letter-spacing: 0.06em; min-width: 9px;
+    }
+    .cam-val {
+      font-size: 11px; font-variant-numeric: tabular-nums;
+      color: rgba(237,233,224,0.7);
+      min-width: 38px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+    .cam-btn-primary {
+      width: 100%; padding: 9px 0;
+      background: rgba(201,169,110,0.16);
+      color: var(--amber);
+      border: 1px solid rgba(201,169,110,0.3);
+      border-radius: 8px;
+      font-size: 12px; font-weight: 500; cursor: pointer; font-family: var(--font);
+      letter-spacing: 0.01em;
+      transition: background 0.16s, border-color 0.16s;
+    }
+    .cam-btn-primary:hover { background: rgba(201,169,110,0.26); border-color: rgba(201,169,110,0.5); }
+    .cam-btn-primary:active { transform: scale(0.97); }
+    .cam-btn-secondary {
+      width: 100%; padding: 8px 0;
+      background: transparent;
+      color: rgba(237,233,224,0.35);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 8px;
+      font-size: 12px; cursor: pointer; font-family: var(--font);
+      transition: background 0.16s, color 0.16s;
+    }
+    .cam-btn-secondary:hover { background: rgba(255,255,255,0.05); color: rgba(237,233,224,0.65); }
+
+    .cam-pinned-badge {
+      font-size: 9px; color: rgba(201,169,110,0.6);
+      text-align: center; letter-spacing: 0.06em;
+      min-height: 12px;
+    }
+
+    /* ── Drawer ─────────────────────────────────────────────── */
     #drawer-overlay {
       position: fixed; inset: 0; z-index: 90;
       pointer-events: none;
@@ -343,101 +402,91 @@
     #drawer-panel {
       position: fixed; top: 0; right: 0; z-index: 95;
       width: 380px; height: 100vh;
-      background: rgba(7,9,17,0.98);
+      background: rgba(8,7,15,0.98);
       border-left: 1px solid var(--border);
       transform: translateX(380px);
       display: flex; flex-direction: column;
-      font-family: var(--font);
-      color: var(--text);
+      font-family: var(--font); color: var(--text);
       overflow-y: auto;
     }
 
     .drawer-header {
       padding: 20px 20px 12px;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
       display: flex; align-items: center; justify-content: space-between;
     }
     .drawer-header h3 {
-      font-size: 0.82rem; font-weight: 600;
-      letter-spacing: 0.1em; color: #7a8aa8;
-      text-transform: uppercase;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase;
     }
     .drawer-close {
-      background: none; border: none; color: #4a5568;
-      font-size: 1.1rem; cursor: pointer;
-      transition: color 0.15s; line-height: 1;
+      background: none; border: none; color: var(--muted);
+      font-size: 16px; cursor: pointer; transition: color 0.15s; line-height: 1;
     }
     .drawer-close:hover { color: var(--text); }
-
-    .drawer-body {
-      padding: 20px; flex: 1;
-      display: flex; flex-direction: column; gap: 14px;
-    }
+    .drawer-body { padding: 20px; flex: 1; display: flex; flex-direction: column; gap: 14px; }
 
     .field label {
-      display: block; font-size: 0.7rem; font-weight: 600;
-      color: #4a5568; margin-bottom: 5px;
-      letter-spacing: 0.08em; text-transform: uppercase;
+      display: block; font-size: 10px; font-weight: 600;
+      color: var(--muted); margin-bottom: 5px; letter-spacing: 0.08em; text-transform: uppercase;
     }
     .field input[type="text"],
     .field input[type="number"] {
       width: 100%; padding: 8px 10px;
       background: rgba(255,255,255,0.04); color: var(--text);
-      border: 1px solid rgba(255,255,255,0.09); border-radius: 6px;
-      font-size: 0.88rem; outline: none; font-family: var(--font);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 6px;
+      font-size: 13px; outline: none; font-family: var(--font);
       transition: border-color 0.15s;
     }
-    .field input:focus { border-color: rgba(74,140,255,0.5); }
+    .field input:focus { border-color: rgba(201,169,110,0.45); }
     .field input[type="file"] { display: none; }
 
     .file-pick-btn {
       width: 100%; padding: 10px;
-      background: rgba(255,255,255,0.03); color: #6b7a99;
-      border: 1px dashed rgba(255,255,255,0.1); border-radius: 6px;
-      font-size: 0.84rem; cursor: pointer; text-align: center;
+      background: rgba(255,255,255,0.025); color: var(--muted);
+      border: 1px dashed rgba(255,255,255,0.09); border-radius: 6px;
+      font-size: 13px; cursor: pointer; text-align: center;
       transition: border-color 0.2s, color 0.2s;
     }
-    .file-pick-btn:hover { border-color: rgba(74,140,255,0.4); color: var(--text); }
-    .file-name { font-size: 0.72rem; color: #5a9cf0; margin-top: 4px; min-height: 1em; }
+    .file-pick-btn:hover { border-color: rgba(201,169,110,0.35); color: var(--text); }
+    .file-name { font-size: 11px; color: var(--amber); margin-top: 4px; min-height: 1em; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
     details.intrinsics summary {
-      font-size: 0.72rem; color: #4a5568; cursor: pointer; padding: 4px 0;
+      font-size: 11px; color: var(--muted); cursor: pointer; padding: 4px 0;
       list-style: none; display: flex; align-items: center; gap: 6px;
     }
-    details.intrinsics summary::before { content: '▶'; font-size: 0.5rem; display: inline-block; }
+    details.intrinsics summary::before { content: '▶'; font-size: 8px; display: inline-block; }
     details.intrinsics[open] summary::before { transform: rotate(90deg); }
-    details.intrinsics[open] summary { color: #6b7a99; margin-bottom: 10px; }
+    details.intrinsics[open] summary { color: rgba(237,233,224,0.5); margin-bottom: 10px; }
 
     .submit-btn {
       width: 100%; padding: 12px;
-      background: var(--accent); color: #fff;
-      border: none; border-radius: 8px;
-      font-size: 0.9rem; font-weight: 600; cursor: pointer;
-      font-family: var(--font);
+      background: var(--amber-dim); color: var(--amber);
+      border: 1px solid rgba(201,169,110,0.28); border-radius: 8px;
+      font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font);
       transition: background 0.15s, transform 0.1s;
     }
-    .submit-btn:hover:not(:disabled)  { background: #5a9bff; }
+    .submit-btn:hover:not(:disabled) { background: rgba(201,169,110,0.25); }
     .submit-btn:active:not(:disabled) { transform: scale(0.98); }
     .submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-    .progress { height: 2px; background: rgba(255,255,255,0.06); border-radius: 1px; overflow: hidden; }
-    .progress-bar { height: 100%; background: var(--accent); width: 0; transition: width 0.4s ease; }
+    .progress { height: 2px; background: rgba(255,255,255,0.05); border-radius: 1px; overflow: hidden; }
+    .progress-bar { height: 100%; background: var(--amber); width: 0; transition: width 0.4s ease; }
 
     #drawer-log {
-      background: rgba(0,0,0,0.45); border-radius: 6px; padding: 10px;
+      background: rgba(0,0,0,0.5); border-radius: 6px; padding: 10px;
       font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 0.66rem; color: #4ade80;
+      font-size: 10px; color: #6ee77a;
       max-height: 130px; overflow-y: auto;
-      white-space: pre-wrap; word-break: break-all;
-      min-height: 36px;
+      white-space: pre-wrap; word-break: break-all; min-height: 36px;
     }
 
     .download-btn {
       width: 100%; padding: 10px;
-      background: rgba(22,163,74,0.15); color: #4ade80;
-      border: 1px solid rgba(22,163,74,0.25); border-radius: 8px;
-      font-size: 0.85rem; cursor: pointer; text-align: center;
+      background: rgba(22,163,74,0.12); color: #4ade80;
+      border: 1px solid rgba(22,163,74,0.22); border-radius: 8px;
+      font-size: 13px; cursor: pointer; text-align: center;
       text-decoration: none; display: none;
     }
     .download-btn.visible { display: block; }
@@ -445,45 +494,71 @@
 </head>
 <body>
 
-  <!-- ── Gallery ────────────────────────────────────────────────────────── -->
   <div id="app">
     <header id="app-header">
       <div class="brand">
-        <div class="brand-glyph">M</div>
+        <div class="brand-icon">
+          <!-- hourglass / memory glyph -->
+          <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 2h12v4l-4 4 4 4v4H4v-4l4-4-4-4V2z" fill-opacity="0.9"/>
+          </svg>
+        </div>
         <div>
-          <div class="brand-name">Memory Archive</div>
-          <div class="brand-tagline">3D time capsule gallery</div>
+          <div class="brand-name">Recall</div>
+          <div class="brand-tag">Preserve what matters</div>
         </div>
       </div>
-      <button id="drawer-toggle">+ Add Memory</button>
+      <button id="drawer-toggle">+ Store a Memory</button>
     </header>
 
     <main id="gallery-section">
-      <p class="section-eyebrow">Archive</p>
-      <h2 class="section-heading">Your memories</h2>
-      <div id="gallery-grid"></div>
+      <div id="gallery-space"></div>
     </main>
   </div>
 
-  <!-- ── Chamber (3D viewer, full-screen overlay) ───────────────────────── -->
+  <!-- Chamber -->
   <div id="chamber-overlay">
     <canvas id="chamber-canvas"></canvas>
 
     <div id="chamber-topbar">
-      <button id="chamber-back">← Gallery</button>
-      <span id="chamber-title-text"></span>
-      <div style="width:104px"></div><!-- spacer to centre title -->
+      <button id="chamber-back">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M9 2L4 7l5 5"/>
+        </svg>
+        Memories
+      </button>
     </div>
 
     <div id="chamber-hint">Drag to orbit · Scroll to zoom · ESC to exit</div>
 
     <div id="chamber-loading">
       <div class="chamber-spinner"></div>
-      <span id="loading-text">LOADING</span>
+      <span id="loading-text">RECONSTRUCTING MEMORY</span>
+    </div>
+
+    <!-- Camera panel -->
+    <div id="cam-panel">
+      <div class="cam-title" id="chamber-title-text">Memory</div>
+      <div class="cam-rule"></div>
+      <div class="cam-section">Camera Position</div>
+      <div class="cam-row">
+        <span class="cam-axis">X</span><span id="cp-x" class="cam-val">0.00</span>
+        <span class="cam-axis">Y</span><span id="cp-y" class="cam-val">0.00</span>
+        <span class="cam-axis">Z</span><span id="cp-z" class="cam-val">5.00</span>
+      </div>
+      <div class="cam-section">Orbit Target</div>
+      <div class="cam-row">
+        <span class="cam-axis">X</span><span id="ct-x" class="cam-val">0.00</span>
+        <span class="cam-axis">Y</span><span id="ct-y" class="cam-val">0.00</span>
+        <span class="cam-axis">Z</span><span id="ct-z" class="cam-val">0.00</span>
+      </div>
+      <button id="cam-pin" class="cam-btn-primary">📍 Pin This View</button>
+      <button id="cam-reset" class="cam-btn-secondary">↺ Reset View</button>
+      <div class="cam-pinned-badge" id="cam-pinned-badge"></div>
     </div>
   </div>
 
-  <!-- ── Drawer (slide-in panel) ──────────────────────────────────────── -->
+  <!-- Drawer -->
   <div id="drawer-overlay"></div>
   <div id="drawer-panel"></div>
 

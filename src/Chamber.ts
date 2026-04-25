@@ -3,18 +3,21 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as GaussianSplats3D from '@mkkellogg/gaussian-splats-3d';
 import type { Memory } from './types';
 
+const DEFAULT_POS    = new THREE.Vector3(0, 0, 5);
+const DEFAULT_TARGET = new THREE.Vector3(0, 0, 0);
+
 export class Chamber {
   readonly camera: THREE.PerspectiveCamera;
+  readonly orbit : OrbitControls;
 
-  private orbit : OrbitControls;
   private viewer: InstanceType<typeof GaussianSplats3D.Viewer> | null = null;
-  private frameCount = 0;
+  private currentId: string | null = null;
 
   constructor(private renderer: THREE.WebGLRenderer) {
     this.camera = new THREE.PerspectiveCamera(
       60, window.innerWidth / window.innerHeight, 0.01, 500,
     );
-    this.camera.position.set(0, 0, 5);
+    this.camera.position.copy(DEFAULT_POS);
 
     this.orbit = new OrbitControls(this.camera, renderer.domElement);
     this.orbit.enableDamping  = true;
@@ -27,18 +30,21 @@ export class Chamber {
   }
 
   async enter(memory: Memory): Promise<void> {
+    this.currentId = memory.id;
     this.orbit.enabled = true;
-    this.frameCount = 0;
-    this.camera.position.set(0, 0, 5);
-    this.orbit.target.set(0, 0, 0);
+
+    // Start at default or pinned view
+    const pinned = this.loadView(memory.id);
+    if (!pinned) {
+      this.camera.position.copy(DEFAULT_POS);
+      this.orbit.target.copy(DEFAULT_TARGET);
+    }
     this.orbit.update();
 
     if (this.viewer) {
       try { await (this.viewer as any).dispose(); } catch { /* ignore */ }
       this.viewer = null;
     }
-
-    console.log('[Chamber] Loading PLY:', memory.plyUrl);
 
     try {
       this.viewer = new GaussianSplats3D.Viewer({
@@ -51,22 +57,18 @@ export class Chamber {
       });
 
       await (this.viewer as any).addSplatScene(memory.plyUrl, {
-        format: GaussianSplats3D.SceneFormat.Ply,
+        format: (GaussianSplats3D as any).SceneFormat?.Ply ?? 2,
         splatAlphaRemovalThreshold: 5,
       });
-
-      const v = this.viewer as any;
-      console.log('[Chamber] Scene loaded — initialized:', v.initialized,
-        'splatRenderReady:', v.splatRenderReady,
-        'splatCount:', v.splatMesh?.getSplatCount?.());
     } catch (err) {
-      console.error('[Chamber] GaussianSplats3D load error:', err);
+      console.error('[Chamber] load error:', err);
       this.viewer = null;
     }
   }
 
   exit() {
     this.orbit.enabled = false;
+    this.currentId = null;
     if (this.viewer) {
       try { (this.viewer as any).dispose?.(); } catch { /* ignore */ }
       this.viewer = null;
@@ -76,9 +78,7 @@ export class Chamber {
   update(_delta: number) {
     this.orbit.update();
     if (this.viewer) {
-      try { (this.viewer as any).update(); } catch (e) {
-        console.warn('[Chamber] update error:', e);
-      }
+      try { (this.viewer as any).update(); } catch { /* ignore */ }
     }
   }
 
@@ -88,23 +88,48 @@ export class Chamber {
       this.renderer.clear();
       return;
     }
+    try { (this.viewer as any).render(); } catch { /* ignore */ }
+  }
 
-    const v = this.viewer as any;
-    this.frameCount++;
-    if (this.frameCount <= 5 || this.frameCount % 120 === 0) {
-      console.log(`[Chamber] render() frame=${this.frameCount}`,
-        'initialized:', v.initialized,
-        'splatRenderReady:', v.splatRenderReady,
-        'disposing:', v.disposing,
-        'disposed:', v.disposed,
-        'splatCount:', v.splatMesh?.getSplatCount?.());
-    }
+  /** Save current camera position + orbit target to localStorage */
+  pinView() {
+    if (!this.currentId) return;
+    localStorage.setItem(`recall_view_${this.currentId}`, JSON.stringify({
+      px: this.camera.position.x, py: this.camera.position.y, pz: this.camera.position.z,
+      tx: this.orbit.target.x,    ty: this.orbit.target.y,    tz: this.orbit.target.z,
+    }));
+  }
 
+  /** Restore pinned view. Returns true if a pinned view was found. */
+  loadView(id: string): boolean {
+    const raw = localStorage.getItem(`recall_view_${id}`);
+    if (!raw) return false;
     try {
-      v.render();
-    } catch (e) {
-      console.warn('[Chamber] splat render error:', e);
-    }
+      const v = JSON.parse(raw);
+      this.camera.position.set(v.px, v.py, v.pz);
+      this.orbit.target.set(v.tx, v.ty, v.tz);
+      this.orbit.update();
+      return true;
+    } catch { return false; }
+  }
+
+  /** Reset to default view (ignores pinned) */
+  resetToDefault() {
+    this.camera.position.copy(DEFAULT_POS);
+    this.orbit.target.copy(DEFAULT_TARGET);
+    this.orbit.update();
+  }
+
+  hasPinnedView(): boolean {
+    return this.currentId != null &&
+      localStorage.getItem(`recall_view_${this.currentId}`) != null;
+  }
+
+  getCoords() {
+    return {
+      px: this.camera.position.x, py: this.camera.position.y, pz: this.camera.position.z,
+      tx: this.orbit.target.x,    ty: this.orbit.target.y,    tz: this.orbit.target.z,
+    };
   }
 
   private onResize = () => {
