@@ -6,12 +6,16 @@ import type { Memory } from './types';
 const DEFAULT_POS    = new THREE.Vector3(0, 0, 5);
 const DEFAULT_TARGET = new THREE.Vector3(0, 0, 0);
 
+const MOVE_SPEED = 1.5;  // units per second
+const TURN_SPEED = 1.6;  // radians per second
+
 export class Chamber {
   readonly camera: THREE.PerspectiveCamera;
   readonly orbit : OrbitControls;
 
-  private viewer: InstanceType<typeof GaussianSplats3D.Viewer> | null = null;
-  private currentId: string | null = null;
+  private viewer    : InstanceType<typeof GaussianSplats3D.Viewer> | null = null;
+  private currentId : string | null = null;
+  private keys      = new Set<string>();
 
   constructor(private renderer: THREE.WebGLRenderer) {
     this.camera = new THREE.PerspectiveCamera(
@@ -29,9 +33,50 @@ export class Chamber {
     window.addEventListener('resize', this.onResize);
   }
 
+  private onKeyDown = (e: KeyboardEvent) => {
+    const k = e.key.toLowerCase();
+    if (k === 'w' || k === 'a' || k === 's' || k === 'd') {
+      e.preventDefault();
+      this.keys.add(k);
+    }
+  };
+
+  private onKeyUp = (e: KeyboardEvent) => {
+    this.keys.delete(e.key.toLowerCase());
+  };
+
+  private applyWASD(delta: number) {
+    if (this.keys.size === 0) return;
+
+    // Forward vector (full 3D direction the camera is looking)
+    const forward = new THREE.Vector3()
+      .subVectors(this.orbit.target, this.camera.position)
+      .normalize();
+
+    if (this.keys.has('w')) {
+      this.camera.position.addScaledVector(forward,  MOVE_SPEED * delta);
+      this.orbit.target.addScaledVector(forward,     MOVE_SPEED * delta);
+    }
+    if (this.keys.has('s')) {
+      this.camera.position.addScaledVector(forward, -MOVE_SPEED * delta);
+      this.orbit.target.addScaledVector(forward,    -MOVE_SPEED * delta);
+    }
+
+    // A/D: yaw the camera in place (rotate target around camera's Y axis)
+    const turn = (this.keys.has('a') ? 1 : 0) - (this.keys.has('d') ? 1 : 0);
+    if (turn !== 0) {
+      const offset = new THREE.Vector3()
+        .subVectors(this.orbit.target, this.camera.position);
+      offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), turn * TURN_SPEED * delta);
+      this.orbit.target.copy(this.camera.position).add(offset);
+    }
+  }
+
   async enter(memory: Memory): Promise<void> {
     this.currentId = memory.id;
     this.orbit.enabled = true;
+    document.addEventListener('keydown', this.onKeyDown);
+    document.addEventListener('keyup',   this.onKeyUp);
 
     // Start at default or pinned view
     const pinned = this.loadView(memory.id);
@@ -72,6 +117,9 @@ export class Chamber {
   }
 
   exit() {
+    document.removeEventListener('keydown', this.onKeyDown);
+    document.removeEventListener('keyup',   this.onKeyUp);
+    this.keys.clear();
     this.orbit.enabled = false;
     this.currentId = null;
     if (this.viewer) {
@@ -80,7 +128,8 @@ export class Chamber {
     }
   }
 
-  update(_delta: number) {
+  update(delta: number) {
+    this.applyWASD(delta);
     this.orbit.update();
     if (this.viewer) {
       try { (this.viewer as any).update(); } catch { /* ignore */ }
@@ -144,6 +193,8 @@ export class Chamber {
 
   dispose() {
     window.removeEventListener('resize', this.onResize);
+    document.removeEventListener('keydown', this.onKeyDown);
+    document.removeEventListener('keyup',   this.onKeyUp);
     this.orbit.dispose();
     if (this.viewer) {
       try { (this.viewer as any).dispose?.(); } catch { /* ignore */ }
