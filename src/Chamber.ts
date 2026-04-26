@@ -62,13 +62,17 @@ export class Chamber {
       this.orbit.target.addScaledVector(forward,    -MOVE_SPEED * delta);
     }
 
-    // A/D: yaw the camera in place (rotate target around camera's Y axis)
-    const turn = (this.keys.has('a') ? 1 : 0) - (this.keys.has('d') ? 1 : 0);
-    if (turn !== 0) {
-      const offset = new THREE.Vector3()
-        .subVectors(this.orbit.target, this.camera.position);
-      offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), turn * TURN_SPEED * delta);
-      this.orbit.target.copy(this.camera.position).add(offset);
+    // A/D: strafe left/right
+    const right = new THREE.Vector3()
+      .crossVectors(forward, this.camera.up)
+      .normalize();
+    if (this.keys.has('d')) {
+      this.camera.position.addScaledVector(right,  MOVE_SPEED * delta);
+      this.orbit.target.addScaledVector(right,     MOVE_SPEED * delta);
+    }
+    if (this.keys.has('a')) {
+      this.camera.position.addScaledVector(right, -MOVE_SPEED * delta);
+      this.orbit.target.addScaledVector(right,    -MOVE_SPEED * delta);
     }
   }
 
