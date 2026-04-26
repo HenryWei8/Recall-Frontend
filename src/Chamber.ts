@@ -7,7 +7,6 @@ const DEFAULT_POS    = new THREE.Vector3(0, 0, 5);
 const DEFAULT_TARGET = new THREE.Vector3(0, 0, 0);
 
 const MOVE_SPEED = 1.5;  // units per second
-const TURN_SPEED = 1.6;  // radians per second
 
 export class Chamber {
   readonly camera: THREE.PerspectiveCamera;
