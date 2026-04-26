@@ -386,6 +386,15 @@
       font-size: 13px; cursor: pointer; text-align: center;
       text-decoration: none; display: none; }
     .download-btn.visible { display: block; }
+
+    .splat-stats-block { display: flex; flex-direction: column; gap: 5px; }
+    .stat-row { display: flex; align-items: center; justify-content: space-between; }
+    .stat-label { font-size: 10px; color: var(--muted); letter-spacing: 0.04em; }
+    .stat-val {
+      font-size: 11px; font-variant-numeric: tabular-nums;
+      color: rgba(237,233,224,0.7);
+      font-family: 'SF Mono','Fira Code',monospace;
+    }
   </style>
 </head>
 <body>
@@ -474,6 +483,18 @@
       <div class="cam-pinned-badge" id="cam-pinned-badge"></div>
       <div class="cam-rule"></div>
       <a id="cam-download" class="cam-btn-download" download>⬇ Download PLY</a>
+      <div class="cam-rule"></div>
+      <div class="cam-section">Splat Stats</div>
+      <div id="splat-stats" class="splat-stats-block">
+        <div class="stat-row">
+          <span class="stat-label">Splats</span>
+          <span class="stat-val" id="stat-splats">—</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">File size</span>
+          <span class="stat-val" id="stat-size">—</span>
+        </div>
+      </div>
     </div>
   </div>
 
