@@ -1,10 +1,9 @@
 import * as THREE from 'three';
-import { Gallery } from './Gallery';
-import { Chamber } from './Chamber';
-import { Drawer }  from './Drawer';
+import { GlobeScene } from './GlobeScene';
+import { Chamber }    from './Chamber';
+import { Drawer }     from './Drawer';
 import { cacheMemory, deleteCachedMemory, renameCachedMemory } from './storage/MemoryCache';
 import { renameMemory } from './api/memories';
-import { Background } from './Background';
 import type { Memory } from './types';
 
 type AppState = 'gallery' | 'transitioning' | 'chamber';
@@ -12,20 +11,18 @@ type AppState = 'gallery' | 'transitioning' | 'chamber';
 export class App {
   private renderer : THREE.WebGLRenderer;
   private clock    = new THREE.Clock();
-  private gallery  : Gallery;
+  private globe    : GlobeScene;
   private chamber  : Chamber;
   private state    : AppState = 'gallery';
   private animFrame: number | null = null;
 
-  // chamber UI elements
-  private chamberOverlay  : HTMLElement;
-  private chamberLoading  : HTMLElement;
-  private camTitleText    : HTMLElement;
-  private camPinnedBadge  : HTMLElement;
-  private camDownload     : HTMLAnchorElement;
+  private chamberOverlay : HTMLElement;
+  private chamberLoading : HTMLElement;
+  private camTitleText   : HTMLElement;
+  private camPinnedBadge : HTMLElement;
+  private camDownload    : HTMLAnchorElement;
   private cpX: HTMLElement; private cpY: HTMLElement; private cpZ: HTMLElement;
   private ctX: HTMLElement; private ctY: HTMLElement; private ctZ: HTMLElement;
-
 
   constructor() {
     const canvas = document.getElementById('chamber-canvas') as HTMLCanvasElement;
@@ -46,18 +43,16 @@ export class App {
     this.ctY = document.getElementById('ct-y')!;
     this.ctZ = document.getElementById('ct-z')!;
 
-    new Background();
-
     this.chamber = new Chamber(this.renderer);
-    this.gallery = new Gallery(
+    this.globe   = new GlobeScene(
       (mem)        => this.enterChamber(mem),
       (mem)        => this.deleteMemory(mem),
       (mem, title) => this.renameMemory(mem, title),
     );
 
     new Drawer((mem) => {
-      this.gallery.addCard(mem);
-      cacheMemory(mem); // fire-and-forget: download PLY + thumbnail to OPFS
+      this.globe.addCard(mem);
+      cacheMemory(mem);
     });
 
     document.getElementById('chamber-back')!
@@ -77,7 +72,7 @@ export class App {
       this.renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    this.gallery.loadMemories();
+    this.globe.loadMemories();
   }
 
   private loop() {
@@ -107,7 +102,6 @@ export class App {
 
   private resetView() {
     if (this.chamber.hasPinnedView()) {
-      // go back to pinned view (not hard-coded default)
       const id = (this.chamber as any).currentId as string | null;
       if (id) this.chamber.loadView(id);
     } else {
@@ -126,6 +120,7 @@ export class App {
     this.chamberLoading.style.display = 'flex';
     this.chamberOverlay.classList.add('visible');
 
+    this.globe.pause();
     await this.chamber.enter(memory);
 
     this.chamberLoading.style.display = 'none';
@@ -145,20 +140,21 @@ export class App {
 
     this.chamber.exit();
     this.chamberOverlay.classList.remove('visible');
+    this.globe.resume();
   }
 
   private async renameMemory(memory: Memory, title: string) {
     renameCachedMemory(memory.id, title);
-    renameMemory(memory.id, title); // fire-and-forget to GX10
+    renameMemory(memory.id, title);
   }
 
   private async deleteMemory(memory: Memory) {
     try {
       await fetch(`/api/memories/${memory.id}`, { method: 'DELETE' });
-    } catch { /* ignore — still remove locally */ }
-    this.gallery.removeCard(memory.id);
+    } catch { /* ignore */ }
+    this.globe.removeCard(memory.id);
     localStorage.removeItem(`recall_view_${memory.id}`);
-    deleteCachedMemory(memory.id); // remove from OPFS + metadata
+    deleteCachedMemory(memory.id);
   }
 
   private hasPinFor(id: string): boolean {
