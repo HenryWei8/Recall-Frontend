@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recall — Preserve What Matters</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #07060e;
+      --surface:   rgba(255,248,236,0.035);
+      --border:    rgba(201,169,110,0.13);
+      --brd-hover: rgba(201,169,110,0.52);
+      --amber:     #c9a96e;
+      --amber-dim: rgba(201,169,110,0.18);
+      --teal:      #7dd8cc;
+      --text:      #ede9e0;
+      --muted:     #6a6257;
+      --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    }
+
+    html { background: var(--bg); color: var(--text); font-family: var(--font);
+           -webkit-font-smoothing: antialiased; }
+    body { min-height: 100vh; overflow: hidden; }
+
+    /* ── Globe canvas (full-screen, interactive) ─────────────── */
+    #globe-canvas {
+      position: fixed; inset: 0; z-index: 0; display: block;
+      width: 100%; height: 100%;
+    }
+
+    /* ── App shell ───────────────────────────────────────────── */
+    #app { position: relative; z-index: 1; pointer-events: none; }
+
+    #app-header {
+      pointer-events: all;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 40;
+      height: 62px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 32px;
+      background: rgba(7,6,14,0.6);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-bottom: 1px solid rgba(201,169,110,0.09);
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-icon {
+      width: 34px; height: 34px;
+      background: linear-gradient(145deg, #c9a96e 0%, #8b6b3d 100%);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .brand-icon svg { width: 18px; height: 18px; fill: rgba(255,255,255,0.92); }
+    .brand-name { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); }
+    .brand-tag  { font-size: 10px; color: var(--muted); margin-top: 1px; letter-spacing: 0.04em; }
+
+    #drawer-toggle {
+      padding: 8px 18px;
+      background: var(--amber-dim);
+      color: var(--amber);
+      border: 1px solid rgba(201,169,110,0.28);
+      border-radius: 8px;
+      font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font);
+      letter-spacing: 0.01em;
+      transition: background 0.18s, border-color 0.18s, transform 0.1s;
+    }
+    #drawer-toggle:hover  { background: rgba(201,169,110,0.26); border-color: rgba(201,169,110,0.5); }
+    #drawer-toggle:active { transform: scale(0.97); }
+
+    /* ── Globe empty state ───────────────────────────────────── */
+    .globe-empty {
+      pointer-events: all;
+      position: fixed;
+      bottom: 60px; left: 50%; transform: translateX(-50%);
+      z-index: 10;
+      text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+    .globe-empty h2 {
+      font-size: 20px; font-weight: 300; letter-spacing: -0.02em;
+      color: rgba(237,233,224,0.45);
+    }
+    .globe-empty p { font-size: 12px; color: var(--muted); max-width: 280px; line-height: 1.8; }
+    .empty-cta {
+      padding: 10px 22px;
+      background: var(--amber-dim); color: var(--amber);
+      border: 1px solid rgba(201,169,110,0.25); border-radius: 8px;
+      font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font);
+      transition: background 0.18s;
+    }
+    .empty-cta:hover { background: rgba(201,169,110,0.26); }
+
+    /* ── Globe tooltip ───────────────────────────────────────── */
+    #globe-tooltip {
+      position: fixed;
+      pointer-events: none;
+      z-index: 50;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      transform: translate(-50%, calc(-100% - 4px));
+      transition: opacity 0.18s;
+      opacity: 0;
+    }
+    #globe-tooltip.visible {
+      display: flex;
+      pointer-events: auto;
+      opacity: 1;
+    }
+
+    .tt-card {
+      background: rgba(7,6,14,0.92);
+      border: 1px solid rgba(201,169,110,0.28);
+      border-radius: 12px;
+      overflow: hidden;
+      width: 210px;
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(201,169,110,0.06);
+    }
+
+    .tt-thumb {
+      width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block;
+      background: #0a0910;
+    }
+
+    .tt-body { padding: 10px 12px 12px; }
+
+    .tt-name-row {
+      display: flex; align-items: center; gap: 5px; margin-bottom: 4px;
+    }
+    .tt-title {
+      font-size: 13px; font-weight: 500; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      flex: 1; min-width: 0; letter-spacing: -0.01em;
+    }
+    .tt-rename-btn {
+      flex-shrink: 0; width: 18px; height: 18px;
+      background: none; border: none; padding: 0;
+      color: rgba(201,169,110,0.4); cursor: pointer;
+      transition: color 0.15s;
+    }
+    .tt-rename-btn:hover { color: var(--amber); }
+    .tt-rename-btn svg { width: 10px; height: 10px; display: block; }
+    .tt-rename-input {
+      flex: 1; min-width: 0;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(201,169,110,0.4); border-radius: 4px;
+      color: var(--text); font-size: 13px; font-family: var(--font);
+      font-weight: 500; letter-spacing: -0.01em;
+      padding: 1px 5px; outline: none;
+    }
+
+    .tt-date {
+      font-size: 10px; color: var(--muted); display: block; margin-bottom: 8px;
+    }
+
+    .tt-actions {
+      display: flex; gap: 6px;
+    }
+    .tt-enter {
+      flex: 1; padding: 7px 0;
+      background: var(--amber-dim); color: var(--amber);
+      border: 1px solid rgba(201,169,110,0.28); border-radius: 7px;
+      font-size: 11px; font-weight: 500; cursor: pointer; font-family: var(--font);
+      letter-spacing: 0.02em;
+      transition: background 0.15s;
+    }
+    .tt-enter:hover { background: rgba(201,169,110,0.28); }
+
+    .tt-delete {
+      width: 30px; height: 30px;
+      background: rgba(255,255,255,0.03); color: rgba(255,120,100,0.6);
+      border: 1px solid rgba(255,100,80,0.15); border-radius: 7px;
+      font-size: 14px; cursor: pointer; font-family: var(--font);
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      line-height: 1;
+    }
+    .tt-delete:hover {
+      background: rgba(255,70,50,0.15); color: rgba(255,100,80,0.9);
+      border-color: rgba(255,100,80,0.4);
+    }
+
+    .tt-stem {
+      width: 1px; height: 44px;
+      background: linear-gradient(to bottom, rgba(201,169,110,0.25), rgba(201,169,110,0));
+      flex-shrink: 0;
+    }
+
+    /* ── Chamber overlay ─────────────────────────────────────── */
+    #chamber-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: #000;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    #chamber-overlay.visible { opacity: 1; pointer-events: all; }
+
+    #chamber-canvas {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%; display: block;
+    }
+
+    #chamber-topbar {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+      display: flex; align-items: center;
+      padding: 16px 20px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%);
+    }
+
+    #chamber-back {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 16px;
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 8px;
+      color: rgba(255,255,255,0.7);
+      font-size: 13px; cursor: pointer; font-family: var(--font);
+      transition: background 0.15s, color 0.15s;
+    }
+    #chamber-back:hover { background: rgba(255,255,255,0.11); color: #fff; }
+
+    #chamber-hint {
+      position: absolute; bottom: 20px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      font-size: 11px; color: rgba(255,255,255,0.18);
+      letter-spacing: 0.1em; pointer-events: none; white-space: nowrap;
+    }
+
+    #chamber-loading {
+      position: absolute; inset: 0; z-index: 5;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 16px;
+    }
+    .chamber-spinner {
+      width: 32px; height: 32px;
+      border: 1.5px solid rgba(255,255,255,0.07);
+      border-top-color: var(--amber);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading-text {
+      font-size: 10px; color: rgba(255,255,255,0.2);
+      letter-spacing: 0.2em;
+    }
+
+    /* ── Camera panel ────────────────────────────────────────── */
+    #cam-panel {
+      position: absolute; top: 72px; right: 20px; z-index: 10;
+      width: 210px;
+      background: rgba(7,6,14,0.78);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(201,169,110,0.16);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .cam-title { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: -0.01em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cam-rule  { height: 1px; background: rgba(201,169,110,0.12); }
+    .cam-section { font-size: 9px; font-weight: 600; color: var(--muted);
+      letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: -4px; }
+    .cam-row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+    .cam-axis { font-size: 9px; font-weight: 700; color: rgba(201,169,110,0.55);
+      letter-spacing: 0.06em; min-width: 9px; }
+    .cam-val  { font-size: 11px; font-variant-numeric: tabular-nums;
+      color: rgba(237,233,224,0.7); min-width: 38px;
+      font-family: 'SF Mono','Fira Code',monospace; }
+    .cam-btn-primary {
+      width: 100%; padding: 9px 0;
+      background: rgba(201,169,110,0.16); color: var(--amber);
+      border: 1px solid rgba(201,169,110,0.3); border-radius: 8px;
+      font-size: 12px; font-weight: 500; cursor: pointer; font-family: var(--font);
+      letter-spacing: 0.01em; transition: background 0.16s, border-color 0.16s;
+    }
+    .cam-btn-primary:hover { background: rgba(201,169,110,0.26); border-color: rgba(201,169,110,0.5); }
+    .cam-btn-primary:active { transform: scale(0.97); }
+    .cam-btn-secondary {
+      width: 100%; padding: 8px 0;
+      background: transparent; color: rgba(237,233,224,0.35);
+      border: 1px solid rgba(255,255,255,0.07); border-radius: 8px;
+      font-size: 12px; cursor: pointer; font-family: var(--font);
+      transition: background 0.16s, color 0.16s;
+    }
+    .cam-btn-secondary:hover { background: rgba(255,255,255,0.05); color: rgba(237,233,224,0.65); }
+    .cam-btn-download {
+      display: block; width: 100%; padding: 8px 0;
+      background: transparent; color: rgba(201,169,110,0.45);
+      border: 1px solid rgba(201,169,110,0.14); border-radius: 8px;
+      font-size: 12px; cursor: pointer; font-family: var(--font);
+      text-align: center; text-decoration: none;
+      transition: background 0.16s, color 0.16s, border-color 0.16s;
+    }
+    .cam-btn-download:hover { background: rgba(201,169,110,0.1); color: var(--amber); border-color: rgba(201,169,110,0.3); }
+    .cam-pinned-badge { font-size: 9px; color: rgba(201,169,110,0.6);
+      text-align: center; letter-spacing: 0.06em; min-height: 12px; }
+
+    /* ── Drawer ──────────────────────────────────────────────── */
+    #drawer-overlay {
+      position: fixed; inset: 0; z-index: 90;
+      pointer-events: none;
+    }
+    #drawer-overlay.active { pointer-events: all; }
+
+    #drawer-panel {
+      position: fixed; top: 0; right: 0; z-index: 95;
+      width: 380px; height: 100vh;
+      background: rgba(8,7,15,0.98);
+      border-left: 1px solid var(--border);
+      transform: translateX(380px);
+      display: flex; flex-direction: column;
+      font-family: var(--font); color: var(--text);
+      overflow-y: auto;
+    }
+
+    .drawer-header {
+      padding: 20px 20px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .drawer-header h3 { font-size: 10px; font-weight: 600;
+      letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
+    .drawer-close { background: none; border: none; color: var(--muted);
+      font-size: 16px; cursor: pointer; transition: color 0.15s; line-height: 1; }
+    .drawer-close:hover { color: var(--text); }
+    .drawer-body { padding: 20px; flex: 1; display: flex; flex-direction: column; gap: 14px; }
+
+    .field label { display: block; font-size: 10px; font-weight: 600;
+      color: var(--muted); margin-bottom: 5px; letter-spacing: 0.08em; text-transform: uppercase; }
+    .field input[type="text"],
+    .field input[type="number"] {
+      width: 100%; padding: 8px 10px;
+      background: rgba(255,255,255,0.04); color: var(--text);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 6px;
+      font-size: 13px; outline: none; font-family: var(--font);
+      transition: border-color 0.15s;
+    }
+    .field input:focus { border-color: rgba(201,169,110,0.45); }
+    .field input[type="file"] { display: none; }
+
+    .file-pick-btn { width: 100%; padding: 10px;
+      background: rgba(255,255,255,0.025); color: var(--muted);
+      border: 1px dashed rgba(255,255,255,0.09); border-radius: 6px;
+      font-size: 13px; cursor: pointer; text-align: center;
+      transition: border-color 0.2s, color 0.2s; }
+    .file-pick-btn:hover { border-color: rgba(201,169,110,0.35); color: var(--text); }
+    .file-name { font-size: 11px; color: var(--amber); margin-top: 4px; min-height: 1em; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    details.intrinsics summary { font-size: 11px; color: var(--muted); cursor: pointer; padding: 4px 0;
+      list-style: none; display: flex; align-items: center; gap: 6px; }
+    details.intrinsics summary::before { content: '▶'; font-size: 8px; display: inline-block; }
+    details.intrinsics[open] summary::before { transform: rotate(90deg); }
+    details.intrinsics[open] summary { color: rgba(237,233,224,0.5); margin-bottom: 10px; }
+
+    .submit-btn { width: 100%; padding: 12px;
+      background: var(--amber-dim); color: var(--amber);
+      border: 1px solid rgba(201,169,110,0.28); border-radius: 8px;
+      font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font);
+      transition: background 0.15s, transform 0.1s; }
+    .submit-btn:hover:not(:disabled) { background: rgba(201,169,110,0.25); }
+    .submit-btn:active:not(:disabled) { transform: scale(0.98); }
+    .submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .progress { height: 2px; background: rgba(255,255,255,0.05); border-radius: 1px; overflow: hidden; }
+    .progress-bar { height: 100%; background: var(--amber); width: 0; transition: width 0.4s ease; }
+
+    #drawer-log {
+      background: rgba(0,0,0,0.5); border-radius: 6px; padding: 10px;
+      font-family: 'SF Mono','Fira Code',monospace;
+      font-size: 10px; color: #6ee77a;
+      max-height: 130px; overflow-y: auto;
+      white-space: pre-wrap; word-break: break-all; min-height: 36px;
+    }
+    .download-btn { width: 100%; padding: 10px;
+      background: rgba(22,163,74,0.12); color: #4ade80;
+      border: 1px solid rgba(22,163,74,0.22); border-radius: 8px;
+      font-size: 13px; cursor: pointer; text-align: center;
+      text-decoration: none; display: none; }
+    .download-btn.visible { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- Globe 3D scene -->
+  <canvas id="globe-canvas"></canvas>
+
+  <!-- Header -->
+  <div id="app">
+    <header id="app-header">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 2h12v4l-4 4 4 4v4H4v-4l4-4-4-4V2z" fill-opacity="0.9"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-name">Recall</div>
+          <div class="brand-tag">Preserve what matters</div>
+        </div>
+      </div>
+      <button id="drawer-toggle">+ Store a Memory</button>
+    </header>
+  </div>
+
+  <!-- Memory hover tooltip -->
+  <div id="globe-tooltip">
+    <div class="tt-card">
+      <img class="tt-thumb" id="tt-thumb" alt="">
+      <div class="tt-body">
+        <div class="tt-name-row">
+          <span class="tt-title" id="tt-title"></span>
+          <button class="tt-rename-btn" id="tt-rename-btn" title="Rename">
+            <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M8.5 1.5l2 2L4 10H2v-2L8.5 1.5z"/>
+            </svg>
+          </button>
+        </div>
+        <span class="tt-date" id="tt-date"></span>
+        <div class="tt-actions">
+          <button class="tt-enter" id="tt-enter">Enter Memory →</button>
+          <button class="tt-delete" id="tt-delete">×</button>
+        </div>
+      </div>
+    </div>
+    <div class="tt-stem"></div>
+  </div>
+
+  <!-- Chamber -->
+  <div id="chamber-overlay">
+    <canvas id="chamber-canvas"></canvas>
+
+    <div id="chamber-topbar">
+      <button id="chamber-back">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M9 2L4 7l5 5"/>
+        </svg>
+        Memories
+      </button>
+    </div>
+
+    <div id="chamber-hint">WASD to move · Drag to orbit · Scroll to zoom · ESC to exit</div>
+
+    <div id="chamber-loading">
+      <div class="chamber-spinner"></div>
+      <span id="loading-text">RECONSTRUCTING MEMORY</span>
+    </div>
+
+    <div id="cam-panel">
+      <div class="cam-title" id="chamber-title-text">Memory</div>
+      <div class="cam-rule"></div>
+      <div class="cam-section">Camera Position</div>
+      <div class="cam-row">
+        <span class="cam-axis">X</span><span id="cp-x" class="cam-val">0.00</span>
+        <span class="cam-axis">Y</span><span id="cp-y" class="cam-val">0.00</span>
+        <span class="cam-axis">Z</span><span id="cp-z" class="cam-val">5.00</span>
+      </div>
+      <div class="cam-section">Orbit Target</div>
+      <div class="cam-row">
+        <span class="cam-axis">X</span><span id="ct-x" class="cam-val">0.00</span>
+        <span class="cam-axis">Y</span><span id="ct-y" class="cam-val">0.00</span>
+        <span class="cam-axis">Z</span><span id="ct-z" class="cam-val">0.00</span>
+      </div>
+      <button id="cam-pin" class="cam-btn-primary">📍 Pin This View</button>
+      <button id="cam-reset" class="cam-btn-secondary">↺ Reset View</button>
+      <div class="cam-pinned-badge" id="cam-pinned-badge"></div>
+      <div class="cam-rule"></div>
+      <a id="cam-download" class="cam-btn-download" download>⬇ Download PLY</a>
+    </div>
+  </div>
+
+  <!-- Drawer -->
+  <div id="drawer-overlay"></div>
+  <div id="drawer-panel"></div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

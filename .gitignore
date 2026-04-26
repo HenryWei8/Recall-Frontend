@@ -14,3 +14,8 @@ datasets
 wandb
 
 result*
+
+node_modules/
+dist/
+.DS_Store
+*.local
