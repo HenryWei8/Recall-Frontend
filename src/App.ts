@@ -3,7 +3,7 @@ import { GlobeScene } from './GlobeScene';
 import { Chamber }    from './Chamber';
 import { Drawer }     from './Drawer';
 import { cacheMemory, deleteCachedMemory, renameCachedMemory } from './storage/MemoryCache';
-import { renameMemory } from './api/memories';
+import { renameMemory, fetchPlyStats } from './api/memories';
 import type { Memory } from './types';
 
 type AppState = 'gallery' | 'transitioning' | 'chamber';
@@ -23,6 +23,8 @@ export class App {
   private camDownload    : HTMLAnchorElement;
   private cpX: HTMLElement; private cpY: HTMLElement; private cpZ: HTMLElement;
   private ctX: HTMLElement; private ctY: HTMLElement; private ctZ: HTMLElement;
+  private statSplats: HTMLElement;
+  private statSize  : HTMLElement;
 
   constructor() {
     const canvas = document.getElementById('chamber-canvas') as HTMLCanvasElement;
@@ -42,6 +44,8 @@ export class App {
     this.ctX = document.getElementById('ct-x')!;
     this.ctY = document.getElementById('ct-y')!;
     this.ctZ = document.getElementById('ct-z')!;
+    this.statSplats = document.getElementById('stat-splats')!;
+    this.statSize   = document.getElementById('stat-size')!;
 
     this.chamber = new Chamber(this.renderer);
     this.globe   = new GlobeScene(
@@ -117,6 +121,8 @@ export class App {
     this.camPinnedBadge.textContent = this.hasPinFor(memory.id) ? '📍 Pinned view loaded' : '';
     this.camDownload.href           = memory.plyUrl;
     this.camDownload.download       = `${memory.title}.ply`;
+    this.statSplats.textContent = '…';
+    this.statSize.textContent   = '…';
     this.chamberLoading.style.display = 'flex';
     this.chamberOverlay.classList.add('visible');
 
@@ -127,6 +133,14 @@ export class App {
     this.state = 'chamber';
     this.clock.getDelta();
     this.loop();
+
+    fetchPlyStats(memory.plyUrl).then(stats => {
+      if (!stats) { this.statSplats.textContent = this.statSize.textContent = '—'; return; }
+      this.statSplats.textContent = stats.splatCount.toLocaleString();
+      this.statSize.textContent   = stats.fileSizeBytes
+        ? `${(stats.fileSizeBytes / 1_048_576).toFixed(1)} MB`
+        : '—';
+    });
   }
 
   private exitChamber() {

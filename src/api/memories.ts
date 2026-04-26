@@ -41,3 +41,46 @@ export async function renameMemory(id: string, title: string): Promise<void> {
   });
   if (!res.ok) console.warn('Rename failed:', res.status);
 }
+
+export interface PlyStats {
+  splatCount: number;
+  fileSizeBytes: number;
+  shDegree: number;
+}
+
+export async function fetchPlyStats(url: string): Promise<PlyStats | null> {
+  try {
+    const res = await fetch(url, { headers: { Range: 'bytes=0-3071' } });
+    if (!res.ok && res.status !== 206) return null;
+
+    let fileSizeBytes = 0;
+    const cr = res.headers.get('Content-Range');
+    if (cr) {
+      const m = cr.match(/\/(\d+)$/);
+      if (m) fileSizeBytes = parseInt(m[1]);
+    }
+    if (!fileSizeBytes) {
+      const cl = res.headers.get('Content-Length');
+      if (cl) fileSizeBytes = parseInt(cl);
+    }
+
+    const bytes = await res.arrayBuffer();
+    // PLY header is ASCII up to "end_header\n"
+    const text = new TextDecoder('ascii').decode(new Uint8Array(bytes));
+    const headerEnd = text.indexOf('end_header');
+    const header = headerEnd >= 0 ? text.slice(0, headerEnd) : text;
+
+    const vertMatch = header.match(/element vertex (\d+)/);
+    const splatCount = vertMatch ? parseInt(vertMatch[1]) : 0;
+
+    // Count f_rest_N properties to determine SH degree
+    const fRestMatches = header.match(/property float f_rest_\d+/g);
+    const fRestCount = fRestMatches ? fRestMatches.length : 0;
+    // 0→deg0, 9→deg1, 24→deg2, 45→deg3
+    const shDegree = fRestCount >= 45 ? 3 : fRestCount >= 24 ? 2 : fRestCount >= 9 ? 1 : 0;
+
+    return { splatCount, fileSizeBytes, shDegree };
+  } catch {
+    return null;
+  }
+}
