@@ -5,8 +5,10 @@ export class WalkControls {
   private controls: PointerLockControls;
   private velocity = new THREE.Vector3();
   private keys = { w: false, a: false, s: false, d: false };
+  private tilt = { up: false, down: false, left: false, right: false };
   private speed = 8;
   private damping = 12;
+  private tiltSpeed = 1.2;
 
   private _onKeyDown: (e: KeyboardEvent) => void;
   private _onKeyUp: (e: KeyboardEvent) => void;
@@ -33,17 +35,25 @@ export class WalkControls {
   }
 
   private onKeyDown(e: KeyboardEvent) {
-    if (e.code === 'KeyW' || e.code === 'ArrowUp')    this.keys.w = true;
-    if (e.code === 'KeyA' || e.code === 'ArrowLeft')  this.keys.a = true;
-    if (e.code === 'KeyS' || e.code === 'ArrowDown')  this.keys.s = true;
-    if (e.code === 'KeyD' || e.code === 'ArrowRight') this.keys.d = true;
+    if (e.code === 'KeyW') this.keys.w = true;
+    if (e.code === 'KeyA') this.keys.a = true;
+    if (e.code === 'KeyS') this.keys.s = true;
+    if (e.code === 'KeyD') this.keys.d = true;
+    if (e.code === 'ArrowUp')    this.tilt.up    = true;
+    if (e.code === 'ArrowDown')  this.tilt.down  = true;
+    if (e.code === 'ArrowLeft')  this.tilt.left  = true;
+    if (e.code === 'ArrowRight') this.tilt.right = true;
   }
 
   private onKeyUp(e: KeyboardEvent) {
-    if (e.code === 'KeyW' || e.code === 'ArrowUp')    this.keys.w = false;
-    if (e.code === 'KeyA' || e.code === 'ArrowLeft')  this.keys.a = false;
-    if (e.code === 'KeyS' || e.code === 'ArrowDown')  this.keys.s = false;
-    if (e.code === 'KeyD' || e.code === 'ArrowRight') this.keys.d = false;
+    if (e.code === 'KeyW') this.keys.w = false;
+    if (e.code === 'KeyA') this.keys.a = false;
+    if (e.code === 'KeyS') this.keys.s = false;
+    if (e.code === 'KeyD') this.keys.d = false;
+    if (e.code === 'ArrowUp')    this.tilt.up    = false;
+    if (e.code === 'ArrowDown')  this.tilt.down  = false;
+    if (e.code === 'ArrowLeft')  this.tilt.left  = false;
+    if (e.code === 'ArrowRight') this.tilt.right = false;
   }
 
   lock()   { this.controls.lock(); }
@@ -67,6 +77,16 @@ export class WalkControls {
 
     // Keep camera at eye level
     this.controls.getObject().position.y = 1.7;
+
+    // Arrow keys: tilt camera (yaw left/right, pitch up/down)
+    const yawObj   = this.controls.getObject();
+    const pitchObj = yawObj.children[0] as THREE.Object3D;
+    const tiltDelta = this.tiltSpeed * delta;
+    if (this.tilt.left)  yawObj.rotation.y   += tiltDelta;
+    if (this.tilt.right) yawObj.rotation.y   -= tiltDelta;
+    if (this.tilt.up)    pitchObj.rotation.x += tiltDelta;
+    if (this.tilt.down)  pitchObj.rotation.x -= tiltDelta;
+    pitchObj.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitchObj.rotation.x));
   }
 
   dispose() {
