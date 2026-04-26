@@ -114,6 +114,7 @@ export class GlobeScene {
   private sceneGroup = new THREE.Group();
 
   private orbits    : MemOrbit[] = [];
+  private connLines : THREE.LineSegments | null = null;
   private raycaster  = new THREE.Raycaster();
   private pointer    = new THREE.Vector2(-9999, -9999);
   private hovered    : MemOrbit | null = null;
@@ -322,6 +323,71 @@ export class GlobeScene {
     );
   }
 
+  // ── Location connection lines ────────────────────────────────
+
+  /** Rebuild the LineSegments geometry whenever the orbit list changes. */
+  private rebuildConnLines() {
+    if (this.connLines) {
+      this.sceneGroup.remove(this.connLines);
+      this.connLines.geometry.dispose();
+      (this.connLines.material as THREE.Material).dispose();
+      this.connLines = null;
+    }
+
+    // Group orbits by normalised location string
+    const groups = new Map<string, MemOrbit[]>();
+    for (const o of this.orbits) {
+      const loc = o.memory.location?.trim().toLowerCase();
+      if (!loc) continue;
+      if (!groups.has(loc)) groups.set(loc, []);
+      groups.get(loc)!.push(o);
+    }
+
+    // Count segments needed (chain: n members → n-1 segments)
+    let segCount = 0;
+    for (const g of groups.values()) if (g.length >= 2) segCount += g.length - 1;
+    if (segCount === 0) return;
+
+    const pos = new Float32Array(segCount * 2 * 3); // 2 endpoints × 3 floats
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+
+    this.connLines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({
+      color: 0x7dd8cc,
+      transparent: true,
+      opacity: 0.3,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    }));
+    this.sceneGroup.add(this.connLines);
+  }
+
+  /** Refresh line endpoint positions every frame (spheres are moving). */
+  private updateConnLines() {
+    if (!this.connLines) return;
+    const attr = this.connLines.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const arr  = attr.array as Float32Array;
+
+    const groups = new Map<string, MemOrbit[]>();
+    for (const o of this.orbits) {
+      const loc = o.memory.location?.trim().toLowerCase();
+      if (!loc) continue;
+      if (!groups.has(loc)) groups.set(loc, []);
+      groups.get(loc)!.push(o);
+    }
+
+    let i = 0;
+    for (const g of groups.values()) {
+      for (let j = 0; j < g.length - 1; j++) {
+        const a = g[j].sphere.position;
+        const b = g[j + 1].sphere.position;
+        arr[i++] = a.x; arr[i++] = a.y; arr[i++] = a.z;
+        arr[i++] = b.x; arr[i++] = b.y; arr[i++] = b.z;
+      }
+    }
+    attr.needsUpdate = true;
+  }
+
   // ── Render loop ──────────────────────────────────────────────
 
   private loop = () => {
@@ -361,6 +427,7 @@ export class GlobeScene {
       }
     }
 
+    this.updateConnLines();
     this.controls.update();
 
     // Raycast hover detection (skip when mouse is over tooltip HTML)
@@ -496,12 +563,14 @@ export class GlobeScene {
 
     if (memories.length === 0) { this.showEmpty(); return; }
     for (const m of memories) this.orbits.push(this.makeOrbit(m));
+    this.rebuildConnLines();
   }
 
   addCard(memory: Memory) {
     this.emptyState?.remove();
     this.emptyState = null;
     this.orbits.push(this.makeOrbit(memory));
+    this.rebuildConnLines();
   }
 
   removeCard(id: string) {
@@ -517,6 +586,7 @@ export class GlobeScene {
       }
     });
     this.orbits.splice(idx, 1);
+    this.rebuildConnLines();
     if (this.orbits.length === 0) this.showEmpty();
   }
 

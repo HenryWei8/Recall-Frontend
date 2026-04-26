@@ -10,6 +10,7 @@ const META_KEY = 'recall_v1';
 interface CacheMeta {
   id: string;
   title: string;
+  location?: string;
   createdAt: string | null;
   plyOk:   boolean;
   thumbOk: boolean;
@@ -65,7 +66,7 @@ export async function cacheMemory(memory: Memory): Promise<void> {
   ]);
 
   const metas = readMetas();
-  const meta: CacheMeta = { id: memory.id, title: memory.title, createdAt: memory.createdAt ?? null, plyOk, thumbOk };
+  const meta: CacheMeta = { id: memory.id, title: memory.title, location: memory.location, createdAt: memory.createdAt ?? null, plyOk, thumbOk };
   const idx = metas.findIndex(m => m.id === memory.id);
   if (idx >= 0) metas[idx] = meta;
   else metas.unshift(meta);
@@ -85,7 +86,7 @@ export async function loadCachedMemories(): Promise<Memory[]> {
     const plyUrl   = m.plyOk   ? (await readBlobUrl(dir, `${m.id}.ply`))   ?? `/api/ply/${m.id}`         : `/api/ply/${m.id}`;
     const thumbUrl = m.thumbOk ? (await readBlobUrl(dir, `${m.id}.thumb`)) ?? `/api/thumbnail/${m.id}`   : `/api/thumbnail/${m.id}`;
     results.push({
-      id: m.id, title: m.title, createdAt: m.createdAt ?? '',
+      id: m.id, title: m.title, location: m.location, createdAt: m.createdAt ?? '',
       plyUrl, thumbnailUrl: thumbUrl, posterUrl: thumbUrl, position: null,
     });
   }

@@ -8,6 +8,7 @@ export interface Memory {
   posterUrl: string;
   position: [number, number, number] | null;
   createdAt: string;
+  location?: string;
 }
 
 export type AppState = 'gallery' | 'transitioning' | 'chamber';

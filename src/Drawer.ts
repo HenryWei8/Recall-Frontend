@@ -11,7 +11,8 @@ export class Drawer {
   private polling: ReturnType<typeof setInterval> | null = null;
 
   // form refs
-  private titleInput!:  HTMLInputElement;
+  private titleInput!:    HTMLInputElement;
+  private locationInput!: HTMLInputElement;
   private fileInput!:   HTMLInputElement;
   private fxInput!:     HTMLInputElement;
   private fyInput!:     HTMLInputElement;
@@ -46,6 +47,10 @@ export class Drawer {
           <input id="d-title" type="text" placeholder="Give this memory a name…" />
         </div>
         <div class="field">
+          <label>LOCATION</label>
+          <input id="d-location" type="text" placeholder="e.g. Paris, My Hometown…" />
+        </div>
+        <div class="field">
           <label>VIDEO FILE</label>
           <div class="file-pick-btn" id="d-file-pick">Drop video or click to browse</div>
           <div class="file-name" id="d-file-name"></div>
@@ -71,7 +76,8 @@ export class Drawer {
       </div>
     `;
 
-    this.titleInput  = document.getElementById('d-title')!  as HTMLInputElement;
+    this.titleInput    = document.getElementById('d-title')!    as HTMLInputElement;
+    this.locationInput = document.getElementById('d-location')! as HTMLInputElement;
     this.fileInput   = document.getElementById('d-file')!   as HTMLInputElement;
     this.fxInput     = document.getElementById('d-fx')!     as HTMLInputElement;
     this.fyInput     = document.getElementById('d-fy')!     as HTMLInputElement;
@@ -201,9 +207,11 @@ export class Drawer {
           (this.dlBtn as HTMLAnchorElement).href = plyUrl(jobId);
           this.dlBtn.classList.add('visible');
 
+          const loc = this.locationInput.value.trim();
           const mem: Memory = {
             id:           jobId,
             title:        this.titleInput.value || 'Memory',
+            location:     loc || undefined,
             plyUrl:       plyUrl(jobId),
             thumbnailUrl: thumbnailUrl(jobId),
             posterUrl:    thumbnailUrl(jobId),
