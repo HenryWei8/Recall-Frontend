@@ -1,1 +1,65 @@
-[]
+[
+  {
+    "id": "fecc3b4b",
+    "title": "Elijah",
+    "plyUrl": "/memories/fecc3b4b.ply",
+    "thumbnailUrl": "/memories/fecc3b4b.jpg",
+    "posterUrl": "/memories/fecc3b4b.jpg",
+    "position": null,
+    "createdAt": "2026-04-26T05:20:06.984763"
+  },
+  {
+    "id": "8a0fecb1",
+    "title": "Royce Hall",
+    "plyUrl": "/memories/8a0fecb1.ply",
+    "thumbnailUrl": "/memories/8a0fecb1.jpg",
+    "posterUrl": "/memories/8a0fecb1.jpg",
+    "position": null,
+    "createdAt": "2026-04-26T04:53:36.079187"
+  },
+  {
+    "id": "dd74b1eb",
+    "title": "UCLA",
+    "plyUrl": "/memories/dd74b1eb.ply",
+    "thumbnailUrl": "/memories/dd74b1eb.jpg",
+    "posterUrl": "/memories/dd74b1eb.jpg",
+    "position": null,
+    "createdAt": "2026-04-26T04:36:53.319172"
+  },
+  {
+    "id": "1585fb68",
+    "title": "Henry 2",
+    "plyUrl": "/memories/1585fb68.ply",
+    "thumbnailUrl": "/memories/1585fb68.jpg",
+    "posterUrl": "/memories/1585fb68.jpg",
+    "position": null,
+    "createdAt": "2026-04-26T04:33:51.858111"
+  },
+  {
+    "id": "f0fafb13",
+    "title": "Dorm Room",
+    "plyUrl": "/memories/f0fafb13.ply",
+    "thumbnailUrl": "/memories/f0fafb13.jpg",
+    "posterUrl": "/memories/f0fafb13.jpg",
+    "position": null,
+    "createdAt": "2026-04-26T03:53:22.820972"
+  },
+  {
+    "id": "76185327",
+    "title": "ASUS Stand",
+    "plyUrl": "/memories/76185327.ply",
+    "thumbnailUrl": "/memories/76185327.jpg",
+    "posterUrl": "/memories/76185327.jpg",
+    "position": null,
+    "createdAt": "2026-04-26T01:48:11.390992"
+  },
+  {
+    "id": "fcf477f3",
+    "title": "Adobe Stand",
+    "plyUrl": "/memories/fcf477f3.ply",
+    "thumbnailUrl": "/memories/fcf477f3.jpg",
+    "posterUrl": "/memories/fcf477f3.jpg",
+    "position": null,
+    "createdAt": "2026-04-26T01:25:10.860192"
+  }
+]
