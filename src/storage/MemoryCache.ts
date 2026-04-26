@@ -116,6 +116,12 @@ export function mergeAndCacheNew(remote: Memory[]): Memory[] {
   return fresh;
 }
 
+/** Update the title in local metadata (OPFS files don't store title). */
+export function renameCachedMemory(id: string, title: string): void {
+  const metas = readMetas().map(m => m.id === id ? { ...m, title } : m);
+  writeMetas(metas);
+}
+
 /** Remove a memory from OPFS and metadata. */
 export async function deleteCachedMemory(id: string): Promise<void> {
   if ('storage' in navigator && 'getDirectory' in navigator.storage) {

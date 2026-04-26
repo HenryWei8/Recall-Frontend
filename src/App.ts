@@ -2,7 +2,9 @@ import * as THREE from 'three';
 import { Gallery } from './Gallery';
 import { Chamber } from './Chamber';
 import { Drawer }  from './Drawer';
-import { cacheMemory, deleteCachedMemory } from './storage/MemoryCache';
+import { cacheMemory, deleteCachedMemory, renameCachedMemory } from './storage/MemoryCache';
+import { renameMemory } from './api/memories';
+import { Background } from './Background';
 import type { Memory } from './types';
 
 type AppState = 'gallery' | 'transitioning' | 'chamber';
@@ -44,10 +46,13 @@ export class App {
     this.ctY = document.getElementById('ct-y')!;
     this.ctZ = document.getElementById('ct-z')!;
 
+    new Background();
+
     this.chamber = new Chamber(this.renderer);
     this.gallery = new Gallery(
-      (mem) => this.enterChamber(mem),
-      (mem) => this.deleteMemory(mem),
+      (mem)        => this.enterChamber(mem),
+      (mem)        => this.deleteMemory(mem),
+      (mem, title) => this.renameMemory(mem, title),
     );
 
     new Drawer((mem) => {
@@ -140,6 +145,11 @@ export class App {
 
     this.chamber.exit();
     this.chamberOverlay.classList.remove('visible');
+  }
+
+  private async renameMemory(memory: Memory, title: string) {
+    renameCachedMemory(memory.id, title);
+    renameMemory(memory.id, title); // fire-and-forget to GX10
   }
 
   private async deleteMemory(memory: Memory) {

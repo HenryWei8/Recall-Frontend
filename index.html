@@ -20,20 +20,45 @@
       --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
     }
 
-    html { background: var(--bg); color: var(--text); font-family: var(--font);
+    html { background: #050408; color: var(--text); font-family: var(--font);
            -webkit-font-smoothing: antialiased; }
     body { min-height: 100vh; overflow-y: auto; }
 
-    /* subtle ambient depth */
-    body::before {
-      content: '';
-      position: fixed; inset: 0; z-index: 0; pointer-events: none;
-      background:
-        radial-gradient(ellipse 70% 50% at 25% 65%, rgba(80,50,20,0.07) 0%, transparent 70%),
-        radial-gradient(ellipse 60% 40% at 75% 30%, rgba(50,35,70,0.06) 0%, transparent 70%);
+    #bg-canvas {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none; display: block;
+    }
+
+    /* ── Rename UI ──────────────────────────────────────────── */
+    .capsule-name-row {
+      display: flex; align-items: center; gap: 5px; margin-bottom: 5px;
+    }
+    .capsule-rename-btn {
+      flex-shrink: 0; width: 20px; height: 20px;
+      background: none; border: none; padding: 0;
+      color: rgba(201,169,110,0.3);
+      cursor: pointer;
+      opacity: 0; transform: scale(0.8);
+      transition: opacity 0.2s, transform 0.2s, color 0.15s;
+    }
+    .capsule-rename-btn svg { width: 11px; height: 11px; display: block; }
+    .capsule-card:hover .capsule-rename-btn { opacity: 1; transform: scale(1); }
+    .capsule-rename-btn:hover { color: var(--amber) !important; }
+
+    .capsule-rename-input {
+      flex: 1; min-width: 0;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(201,169,110,0.4);
+      border-radius: 5px;
+      color: var(--text);
+      font-size: 14px; font-family: var(--font);
+      font-weight: 500; letter-spacing: -0.01em;
+      padding: 2px 6px;
+      outline: none;
     }
 
     /* ── Header ────────────────────────────────────────────── */
+    #app { position: relative; z-index: 1; }
+
     #app-header {
       position: sticky; top: 0; z-index: 40;
       height: 62px;
@@ -231,9 +256,9 @@
     .capsule-info { padding: 13px 15px 15px; }
     .capsule-name {
       font-size: 14px; font-weight: 500;
-      color: var(--text); margin-bottom: 5px;
+      color: var(--text);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.01em; flex: 1; min-width: 0;
     }
     .capsule-meta { display: flex; align-items: center; gap: 7px; }
     .capsule-date { font-size: 11px; color: var(--muted); }
@@ -504,6 +529,8 @@
   </style>
 </head>
 <body>
+
+  <canvas id="bg-canvas"></canvas>
 
   <div id="app">
     <header id="app-header">

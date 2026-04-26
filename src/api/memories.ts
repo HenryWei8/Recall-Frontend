@@ -32,3 +32,12 @@ export function plyUrl(jobId: string): string {
 export function thumbnailUrl(jobId: string): string {
   return `${BASE}/api/thumbnail/${jobId}`;
 }
+
+export async function renameMemory(id: string, title: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/memories/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  });
+  if (!res.ok) console.warn('Rename failed:', res.status);
+}

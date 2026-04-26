@@ -8,8 +8,9 @@ export class Gallery {
   private cards: CapsuleCard[] = [];
 
   constructor(
-    private onOpen: (m: Memory) => void,
+    private onOpen  : (m: Memory) => void,
     private onDelete: (m: Memory) => void,
+    private onRename: (m: Memory, title: string) => void,
   ) {
     this.space = document.getElementById('gallery-space')!;
   }
@@ -59,7 +60,7 @@ export class Gallery {
   }
 
   private makeCard(mem: Memory): CapsuleCard {
-    const card = new CapsuleCard(mem, this.onOpen, this.onDelete);
+    const card = new CapsuleCard(mem, this.onOpen, this.onDelete, this.onRename);
     card.setFloatParams(
       8  + Math.random() * 9,
       7  + Math.random() * 6,

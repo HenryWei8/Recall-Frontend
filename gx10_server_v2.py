@@ -265,12 +265,17 @@ def _run(job_id: str, dataset_dir: Path, config_path: Path, results_dir: Path):
         gpu_lock.acquire()
 
     try:
-        torch_lib = str(
-            PYTHON_BIN.parent.parent / "lib" / "python3.12"
-            / "site-packages" / "torch" / "lib"
-        )
+        # Find torch/lib dynamically — don't hardcode python3.12
+        torch_lib = ""
+        lib_root = PYTHON_BIN.parent.parent / "lib"
+        for pydir in sorted(lib_root.glob("python3.*"), reverse=True):
+            candidate = pydir / "site-packages" / "torch" / "lib"
+            if candidate.exists():
+                torch_lib = str(candidate)
+                break
         env = os.environ.copy()
-        env["LD_LIBRARY_PATH"] = torch_lib + ":" + env.get("LD_LIBRARY_PATH", "")
+        if torch_lib:
+            env["LD_LIBRARY_PATH"] = torch_lib + ":" + env.get("LD_LIBRARY_PATH", "")
 
         proc = subprocess.Popen(
             [str(PYTHON_BIN), "slam.py", "--config", str(config_path)],
@@ -410,6 +415,11 @@ async def api_submit(
     config_yaml = f"""\
 inherit_from: "{base_cfg}"
 
+Training:
+  num_iters: 10000
+  save_iterations: [10000]
+  checkpoint_iterations: []
+
 Dataset:
   dataset_path: "{dataset_dir}"
   Calibration:
@@ -493,6 +503,22 @@ async def api_thumbnail(job_id: str):
     if not thumb_path or not Path(thumb_path).exists():
         raise HTTPException(404, "Thumbnail not found")
     return FileResponse(thumb_path, media_type="image/jpeg")
+
+
+@app.patch("/api/memories/{job_id}")
+async def api_rename_memory(job_id: str, body: dict):
+    title = (body.get("title") or "").strip()
+    if not title:
+        raise HTTPException(400, "title is required")
+    conn = _get_db()
+    row = conn.execute("SELECT id FROM jobs WHERE id = ?", (job_id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "Not found")
+    conn.execute("UPDATE jobs SET title = ? WHERE id = ?", (title, job_id))
+    conn.commit()
+    conn.close()
+    return {"id": job_id, "title": title}
 
 
 @app.delete("/api/memories/{job_id}")
