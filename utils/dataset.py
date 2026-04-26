@@ -52,7 +52,7 @@ class TUMParser:
         self.n_img = len(self.color_paths)
 
     def parse_list(self, filepath, skiprows=0):
-        data = np.loadtxt(filepath, delimiter=" ", dtype=np.unicode_, skiprows=skiprows)
+        data = np.loadtxt(filepath, delimiter=" ", dtype=np.str_, skiprows=skiprows)
         return data
 
     def associate_frames(self, tstamp_image, tstamp_depth, tstamp_pose, max_dt=0.08):
@@ -426,6 +426,63 @@ class EurocDataset(StereoDataset):
         self.poses = parser.poses
 
 
+class WebcamDataset(BaseDataset):
+    def __init__(self, args, path, config):
+        super().__init__(args, path, config)
+        calibration = config["Dataset"]["Calibration"]
+        self.fx = calibration["fx"]
+        self.fy = calibration["fy"]
+        self.cx = calibration["cx"]
+        self.cy = calibration["cy"]
+        self.width = calibration["width"]
+        self.height = calibration["height"]
+        self.fovx = focal2fov(self.fx, self.width)
+        self.fovy = focal2fov(self.fy, self.height)
+        self.K = np.array(
+            [[self.fx, 0.0, self.cx], [0.0, self.fy, self.cy], [0.0, 0.0, 1.0]]
+        )
+        self.disorted = calibration["distorted"]
+        self.dist_coeffs = np.array([
+            calibration["k1"], calibration["k2"],
+            calibration["p1"], calibration["p2"], calibration["k3"],
+        ])
+        self.map1x, self.map1y = cv2.initUndistortRectifyMap(
+            self.K, self.dist_coeffs, np.eye(3), self.K,
+            (self.width, self.height), cv2.CV_32FC1,
+        )
+        self.has_depth = False
+
+        device_id = config["Dataset"].get("device_id", 0)
+        self.cap = cv2.VideoCapture(device_id)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+        if not self.cap.isOpened():
+            raise RuntimeError(f"Cannot open webcam device {device_id}")
+
+        self.scene_info = {
+            "nerf_normalization": {
+                "radius": 5,
+                "translation": np.zeros(3),
+            },
+        }
+
+    def __getitem__(self, idx):
+        pose = torch.eye(4, device=self.device, dtype=self.dtype)
+        ret, image = self.cap.read()
+        if not ret:
+            raise RuntimeError("Failed to read frame from webcam")
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        if self.disorted:
+            image = cv2.remap(image, self.map1x, self.map1y, cv2.INTER_LINEAR)
+        image = (
+            torch.from_numpy(image / 255.0)
+            .clamp(0.0, 1.0)
+            .permute(2, 0, 1)
+            .to(device=self.device, dtype=self.dtype)
+        )
+        return image, None, pose
+
+
 class RealsenseDataset(BaseDataset):
     def __init__(self, args, path, config):
         super().__init__(args, path, config)
@@ -528,5 +585,7 @@ def load_dataset(args, path, config):
         return EurocDataset(args, path, config)
     elif config["Dataset"]["type"] == "realsense":
         return RealsenseDataset(args, path, config)
+    elif config["Dataset"]["type"] == "webcam":
+        return WebcamDataset(args, path, config)
     else:
         raise ValueError("Unknown dataset type")

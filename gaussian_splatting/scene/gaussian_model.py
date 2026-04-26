@@ -12,7 +12,7 @@
 import os
 
 import numpy as np
-import open3d as o3d
+# open3d has no ARM wheel; replaced with numpy unprojection below
 import torch
 from plyfile import PlyData, PlyElement
 from simple_knn._C import distCUDA2
@@ -111,8 +111,8 @@ class GaussianModel:
         rgb_raw = (image_ab * 255).byte().permute(1, 2, 0).contiguous().cpu().numpy()
 
         if depthmap is not None:
-            rgb = o3d.geometry.Image(rgb_raw.astype(np.uint8))
-            depth = o3d.geometry.Image(depthmap.astype(np.float32))
+            rgb = rgb_raw.astype(np.uint8)
+            depth = depthmap.astype(np.float32)
         else:
             depth_raw = cam.depth
             if depth_raw is None:
@@ -125,12 +125,14 @@ class GaussianModel:
                     * 0.05
                 ) * scale
 
-            rgb = o3d.geometry.Image(rgb_raw.astype(np.uint8))
-            depth = o3d.geometry.Image(depth_raw.astype(np.float32))
+            rgb = rgb_raw.astype(np.uint8)
+            depth = depth_raw.astype(np.float32)
 
         return self.create_pcd_from_image_and_depth(cam, rgb, depth, init)
 
     def create_pcd_from_image_and_depth(self, cam, rgb, depth, init=False):
+        # rgb: uint8 numpy array (H, W, 3)
+        # depth: float32 numpy array (H, W) — values in metres, 0 = invalid
         if init:
             downsample_factor = self.config["Dataset"]["pcd_downsample_init"]
         else:
@@ -138,32 +140,32 @@ class GaussianModel:
         point_size = self.config["Dataset"]["point_size"]
         if "adaptive_pointsize" in self.config["Dataset"]:
             if self.config["Dataset"]["adaptive_pointsize"]:
-                point_size = min(0.05, point_size * np.median(depth))
-        rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(
-            rgb,
-            depth,
-            depth_scale=1.0,
-            depth_trunc=100.0,
-            convert_rgb_to_intensity=False,
-        )
+                point_size = min(0.05, point_size * float(np.median(depth)))
+
+        H, W = depth.shape
+        uu, vv = np.meshgrid(np.arange(W, dtype=np.float64),
+                             np.arange(H, dtype=np.float64))
+        d = depth.astype(np.float64)
+        valid = (d > 0.0) & (d < 100.0)
+        d_v = d[valid]
+        x_cam = (uu[valid] - cam.cx) / cam.fx * d_v
+        y_cam = (vv[valid] - cam.cy) / cam.fy * d_v
+        z_cam = d_v
+        pts_cam = np.stack([x_cam, y_cam, z_cam, np.ones_like(z_cam)], axis=1)
 
         W2C = getWorld2View2(cam.R, cam.T).cpu().numpy()
-        pcd_tmp = o3d.geometry.PointCloud.create_from_rgbd_image(
-            rgbd,
-            o3d.camera.PinholeCameraIntrinsic(
-                cam.image_width,
-                cam.image_height,
-                cam.fx,
-                cam.fy,
-                cam.cx,
-                cam.cy,
-            ),
-            extrinsic=W2C,
-            project_valid_depth_only=True,
-        )
-        pcd_tmp = pcd_tmp.random_down_sample(1.0 / downsample_factor)
-        new_xyz = np.asarray(pcd_tmp.points)
-        new_rgb = np.asarray(pcd_tmp.colors)
+        C2W = np.linalg.inv(W2C)
+        pts_world = (C2W @ pts_cam.T).T[:, :3]
+        rgb_valid = rgb[valid].astype(np.float64) / 255.0
+
+        n = len(pts_world)
+        if downsample_factor > 1 and n > downsample_factor:
+            idx = np.random.choice(n, n // downsample_factor, replace=False)
+            pts_world = pts_world[idx]
+            rgb_valid = rgb_valid[idx]
+
+        new_xyz = pts_world
+        new_rgb = rgb_valid
 
         pcd = BasicPointCloud(
             points=new_xyz, colors=new_rgb, normals=np.zeros((new_xyz.shape[0], 3))

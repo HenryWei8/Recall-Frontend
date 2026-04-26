@@ -92,6 +92,29 @@ def _init_db():
 _init_db()
 
 
+def _recover_orphaned_jobs():
+    """On startup, resolve any jobs left in running/queued state by a previous server process."""
+    with _db_lock:
+        conn = _get_db()
+        orphans = conn.execute(
+            "SELECT id FROM jobs WHERE status IN ('running', 'queued')"
+        ).fetchall()
+        conn.close()
+
+    for row in orphans:
+        job_id = row["id"]
+        job_dir = JOBS_DIR / job_id
+        ply = _find_ply(job_dir / "results")
+        if ply:
+            _update_job(job_id, status="done", ply_path=str(ply))
+        else:
+            _update_job(job_id, status="failed",
+                        error="Server restarted while job was in progress")
+
+
+_recover_orphaned_jobs()
+
+
 def _update_job(job_id: str, **kwargs):
     with _db_lock:
         conn = _get_db()

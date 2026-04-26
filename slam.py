@@ -40,7 +40,7 @@ class SLAM:
             pipeline_params,
         )
 
-        self.live_mode = self.config["Dataset"]["type"] == "realsense"
+        self.live_mode = self.config["Dataset"]["type"] in ("realsense", "webcam")
         self.monocular = self.config["Dataset"]["sensor_type"] == "monocular"
         self.use_spherical_harmonics = self.config["Training"]["spherical_harmonics"]
         self.use_gui = self.config["Results"]["use_gui"]
